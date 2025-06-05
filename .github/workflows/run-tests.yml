@@ -36,8 +36,8 @@ jobs:
         env:
           GH_EVT: ${{github.event_name}}
           GH_REPO: ${{github.repository}}
-          AWS_ACCESS_KEY_ID: ${{vars.AWS_ACCESS_KEY_ID}}
-          AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+          AWS_ACCESS_KEY_ID: ${{vars.AWS_ACCESS_KEY_ID_DVC}}
+          AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY_DVC}}
 
       - name: Run tests
         run: |
