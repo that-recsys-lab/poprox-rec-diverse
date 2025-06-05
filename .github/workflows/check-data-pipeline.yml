@@ -42,8 +42,8 @@ jobs:
           dvc config --local cache.type hardlink
           dvc pull
         env:
-          AWS_ACCESS_KEY_ID: ${{vars.AWS_ACCESS_KEY_ID}}
-          AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+          AWS_ACCESS_KEY_ID: ${{vars.AWS_ACCESS_KEY_ID_DVC}}
+          AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY_DVC}}
 
       - name: Check pipeline status
         run: |
@@ -87,8 +87,8 @@ jobs:
           dvc config --local cache.type hardlink
           dvc pull
         env:
-          AWS_ACCESS_KEY_ID: ${{vars.AWS_ACCESS_KEY_ID}}
-          AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+          AWS_ACCESS_KEY_ID: ${{vars.AWS_ACCESS_KEY_ID_DVC}}
+          AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY_DVC}}
 
       - name: Re-run MIND subset outputs
         run: |
