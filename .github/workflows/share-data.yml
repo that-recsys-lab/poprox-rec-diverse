@@ -2,8 +2,8 @@ name: Update Shared Data
 
 on:
   push:
-# branches:
-# - main
+    branches:
+      - main
 
 jobs:
   share-data:
