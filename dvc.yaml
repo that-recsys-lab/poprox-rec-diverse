@@ -11,6 +11,7 @@ vars:
       - nrms_images
       - nrms_topic_mmr
       - nrms_topic_mmr_personalized
+      - mmrp
 
 stages:
   # these are *foreach stages*: they have multiple versions, one for each pipeline.
