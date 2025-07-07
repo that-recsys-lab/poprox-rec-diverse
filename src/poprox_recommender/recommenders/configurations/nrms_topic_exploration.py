@@ -7,8 +7,10 @@ from poprox_recommender.components.embedders import NRMSArticleEmbedder
 from poprox_recommender.components.embedders.article import NRMSArticleEmbedderConfig
 from poprox_recommender.components.embedders.user import NRMSUserEmbedder, NRMSUserEmbedderConfig
 from poprox_recommender.components.embedders.user_topic_prefs import UserOnboardingConfig, UserOnboardingEmbedder
-from poprox_recommender.components.joiners.rrf import ReciprocalRankFusion
+from poprox_recommender.components.filters.topic import TopicFilter
+from poprox_recommender.components.joiners.score import ScoreFusion
 from poprox_recommender.components.rankers.topk import TopkRanker
+from poprox_recommender.components.samplers.epsilon_greedy import EpsilonGreedy
 from poprox_recommender.components.scorers.article import ArticleScorer
 from poprox_recommender.paths import model_file_path
 
@@ -20,11 +22,16 @@ def configure(builder: PipelineBuilder, num_slots: int, device: str):
     i_clicked = builder.create_input("clicked", CandidateSet)
     i_profile = builder.create_input("profile", InterestProfile)
 
+    # Filter articles based on topic preferences
+    f_candidates = builder.add_component(
+        "topic-filter", TopicFilter, candidates=i_candidates, interest_profile=i_profile
+    )
+
     # Embed candidate and clicked articles
     ae_config = NRMSArticleEmbedderConfig(
         model_path=model_file_path("nrms-mind/news_encoder.safetensors"), device=device
     )
-    e_candidates = builder.add_component("candidate-embedder", NRMSArticleEmbedder, ae_config, article_set=i_candidates)
+    e_candidates = builder.add_component("candidate-embedder", NRMSArticleEmbedder, ae_config, article_set=f_candidates)
     e_clicked = builder.add_component(
         "history-NRMSArticleEmbedder", NRMSArticleEmbedder, ae_config, article_set=i_clicked
     )
@@ -58,15 +65,16 @@ def configure(builder: PipelineBuilder, num_slots: int, device: str):
 
     # Score and rank articles (history)
     n_scorer = builder.add_component("scorer", ArticleScorer, candidate_articles=e_candidates, interest_profile=e_user)
-    n_ranker = builder.add_component("ranker", TopkRanker, {"num_slots": num_slots}, candidate_articles=n_scorer)
 
     # Score and rank articles (topics)
-    n_scored2 = builder.add_component(
+    n_scorer2 = builder.add_component(
         "scorer2", ArticleScorer, candidate_articles=builder.node("candidate-embedder"), interest_profile=e_user2
     )
-    n_ranker2 = builder.add_component("ranker2", TopkRanker, {"num_slots": num_slots}, candidate_articles=n_scored2)
 
     # Combine click and topic scoring
-    builder.add_component(
-        "recommender", ReciprocalRankFusion, {"num_slots": num_slots}, recs1=n_ranker, recs2=n_ranker2
+    s_fusion = builder.add_component(
+        "fusion", ScoreFusion, {"combiner": "avg"}, candidates1=n_scorer, candidates2=n_scorer2
     )
+
+    r_topk = builder.add_component("ranker", TopkRanker, {"num_slots": num_slots}, candidate_articles=s_fusion)
+    builder.add_component("recommender", EpsilonGreedy, ranked=r_topk, candidates=f_candidates)
