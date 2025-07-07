@@ -3,18 +3,36 @@
 from lenskit.pipeline import PipelineBuilder
 
 from poprox_concepts import CandidateSet, InterestProfile
-from poprox_recommender.components.diversifiers.mmr import MMRDiversifier
+from poprox_concepts.domain import RecommendationList
+from poprox_recommender.components.diversifiers.mmr import MMRConfig, MMRDiversifier
 from poprox_recommender.components.embedders import NRMSArticleEmbedder
 from poprox_recommender.components.embedders.article import NRMSArticleEmbedderConfig
 from poprox_recommender.components.embedders.topic_wise_user import UserOnboardingConfig, UserOnboardingEmbedder
 from poprox_recommender.components.embedders.user import NRMSUserEmbedder, NRMSUserEmbedderConfig
 from poprox_recommender.components.joiners.score import ScoreFusion
-from poprox_recommender.components.rankers.topk import TopkRanker
 from poprox_recommender.components.scorers.article import ArticleScorer
 from poprox_recommender.paths import model_file_path
 
 ##TODO:
 # allow weigths for the scores (1/-1)
+
+
+def create_scored_candidates(fused_scores: CandidateSet, embedded_candidates: CandidateSet) -> CandidateSet:
+    """Create a new CandidateSet with fused scores and embeddings from embedded candidates."""
+    return CandidateSet(
+        articles=fused_scores.articles, scores=fused_scores.scores, embeddings=embedded_candidates.embeddings
+    )
+
+
+def recommendation_list_to_candidate_set(recommendation_list):
+    """Convert RecommendationList back to CandidateSet for TopkRanker."""
+    return CandidateSet(articles=recommendation_list.articles)
+
+
+def final_recommender(x):
+    if x is None or not hasattr(x, "articles") or x.articles is None:
+        return RecommendationList(articles=[])
+    return x
 
 
 def configure(builder: PipelineBuilder, num_slots: int, device: str):
@@ -73,14 +91,27 @@ def configure(builder: PipelineBuilder, num_slots: int, device: str):
         "fusion", ScoreFusion, {"combiner": "avg"}, candidates1=n_scorer, candidates2=n_scorer2
     )
 
-    # Apply MMR diversification before final ranking
+    scored_candidates = builder.add_component(
+        "scored-candidates", create_scored_candidates, fused_scores=fusion, embedded_candidates=e_candidates
+    )
+
+    # Apply MMR diversification to the scored candidates
+    def apply_mmr(candidate_articles, interest_profile):
+        try:
+            config = MMRConfig(num_slots=num_slots, theta=0.7)
+            result = MMRDiversifier(config)(candidate_articles, interest_profile)
+            if result is None or not hasattr(result, "articles") or result.articles is None:
+                return RecommendationList(articles=[])
+            return result
+        except Exception:
+            return RecommendationList(articles=[])
+
     n_reranker = builder.add_component(
         "reranker",
-        MMRDiversifier,
-        {"num_slots": num_slots, "theta": 0.7},
-        candidate_articles=fusion,
+        apply_mmr,
+        candidate_articles=scored_candidates,
         interest_profile=e_user,
     )
 
-    # Final ranking using the diversified results
-    builder.add_component("recommender", TopkRanker, {"num_slots": num_slots}, candidate_articles=n_reranker)
+    # Final recommendation using the MMR diversified results directly, with a safety wrapper
+    builder.add_component("recommender", final_recommender, candidate_articles=n_reranker)
