@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from poprox_concepts.domain import CandidateSet, InterestProfile, RecommendationList
 from poprox_recommender.pytorch.datachecks import assert_tensor_size
 from poprox_recommender.pytorch.decorators import torch_inference
+from poprox_recommender.topics import find_topic
 
 
 class MMRPConfig(BaseModel):
@@ -14,11 +15,14 @@ class MMRPConfig(BaseModel):
     num_slots: int = 10
 
 
-def calculate_beta(interest_profile: InterestProfile) -> float:
+def calculate_beta(candidate_articles: CandidateSet, interest_profile: InterestProfile) -> float:
     click_history = getattr(interest_profile, "click_history", [])
+    clicked_article_ids = [click.article_id for click in click_history]
+    past_articles = candidate_articles.articles
     all_topics = []
-    for article in click_history:
-        topics = getattr(article, "topics", [])
+
+    for article_id in clicked_article_ids:
+        topics = find_topic(past_articles, article_id)
         all_topics.extend(topics)
 
     if all_topics:
@@ -39,7 +43,7 @@ class MMRPDiversifier(Component):
 
     @torch_inference
     def __call__(self, candidate_articles: CandidateSet, interest_profile: InterestProfile) -> RecommendationList:
-        beta = calculate_beta(interest_profile)
+        beta = calculate_beta(candidate_articles, interest_profile)
         theta = self.config.theta * beta
 
         if candidate_articles.scores is None:

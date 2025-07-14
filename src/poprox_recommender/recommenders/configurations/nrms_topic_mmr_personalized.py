@@ -1,48 +1,39 @@
 # pyright: basic
 
+import torch
 from lenskit.pipeline import PipelineBuilder
 
 from poprox_concepts import CandidateSet, InterestProfile
 from poprox_concepts.domain import RecommendationList
-from poprox_recommender.components.diversifiers.mmrp import MMRPConfig, MMRPDiversifier
+from poprox_recommender.components.diversifiers.mmrp import MMRPDiversifier
 from poprox_recommender.components.embedders import NRMSArticleEmbedder
 from poprox_recommender.components.embedders.article import NRMSArticleEmbedderConfig
-from poprox_recommender.components.embedders.topic_wise_user import UserOnboardingConfig, UserOnboardingEmbedder
 from poprox_recommender.components.embedders.user import NRMSUserEmbedder, NRMSUserEmbedderConfig
+from poprox_recommender.components.embedders.user_topic_prefs import UserOnboardingConfig, UserOnboardingEmbedder
 from poprox_recommender.components.joiners.score import ScoreFusion
+from poprox_recommender.components.rankers.topk import TopkRanker
 from poprox_recommender.components.scorers.article import ArticleScorer
 from poprox_recommender.paths import model_file_path
 
-##TODO:
-# allow weigths for the scores (1/-1)
 
-
-def create_scored_candidates(fused_scores: CandidateSet, embedded_candidates: CandidateSet) -> CandidateSet:
-    """Create a new CandidateSet with fused scores and embeddings from embedded candidates."""
-    return CandidateSet(
-        articles=fused_scores.articles, scores=fused_scores.scores, embeddings=embedded_candidates.embeddings
-    )
-
-
-def recommendation_list_to_candidate_set(recommendation_list):
-    """Convert RecommendationList back to CandidateSet for TopkRanker."""
-    return CandidateSet(articles=recommendation_list.articles)
-
-
-def final_recommender(x):
+def to_recommendation_list(x):
     if x is None or not hasattr(x, "articles") or x.articles is None:
         return RecommendationList(articles=[])
-    return x
+    return RecommendationList(articles=x.articles)
+
+
+def add_embeddings(fused: CandidateSet, embedded: CandidateSet) -> CandidateSet:
+    # Copy embeddings from embedded candidates to fused set
+    emb_map = {a.article_id: emb for a, emb in zip(embedded.articles, embedded.embeddings)}
+    embeddings = torch.stack([emb_map[a.article_id] for a in fused.articles])
+    return CandidateSet(articles=fused.articles, scores=fused.scores, embeddings=embeddings)
 
 
 def configure(builder: PipelineBuilder, num_slots: int, device: str):
-    # standard practice is to put these calls in this order, to reuse logic
-    # Define pipeline inputs
     i_candidates = builder.create_input("candidate", CandidateSet)
     i_clicked = builder.create_input("clicked", CandidateSet)
     i_profile = builder.create_input("profile", InterestProfile)
 
-    # Embed candidate and clicked articles
     ae_config = NRMSArticleEmbedderConfig(
         model_path=model_file_path("nrms-mind/news_encoder.safetensors"), device=device
     )
@@ -51,7 +42,6 @@ def configure(builder: PipelineBuilder, num_slots: int, device: str):
         "history-NRMSArticleEmbedder", NRMSArticleEmbedder, ae_config, article_set=i_clicked
     )
 
-    # Embed the user (historical clicks)
     ue_config = NRMSUserEmbedderConfig(model_path=model_file_path("nrms-mind/user_encoder.safetensors"), device=device)
     e_user = builder.add_component(
         "user-embedder",
@@ -61,8 +51,6 @@ def configure(builder: PipelineBuilder, num_slots: int, device: str):
         clicked_articles=e_clicked,
         interest_profile=i_profile,
     )
-
-    # Embed the user (topics)
     ue_config2 = UserOnboardingConfig(
         model_path=model_file_path("nrms-mind/user_encoder.safetensors"),
         device=device,
@@ -78,40 +66,33 @@ def configure(builder: PipelineBuilder, num_slots: int, device: str):
         interest_profile=i_profile,
     )
 
-    # Score and rank articles (history)
     n_scorer = builder.add_component("scorer", ArticleScorer, candidate_articles=e_candidates, interest_profile=e_user)
-
-    # Score and rank articles (topics)
     n_scorer2 = builder.add_component(
-        "scorer2", ArticleScorer, candidate_articles=builder.node("candidate-embedder"), interest_profile=e_user2
+        "scorer2", ArticleScorer, candidate_articles=e_candidates, interest_profile=e_user2
     )
-
-    # Combine click and topic scoring
     fusion = builder.add_component(
         "fusion", ScoreFusion, {"combiner": "avg"}, candidates1=n_scorer, candidates2=n_scorer2
     )
 
-    scored_candidates = builder.add_component(
-        "scored-candidates", create_scored_candidates, fused_scores=fusion, embedded_candidates=e_candidates
+    fused_with_embeddings = builder.add_component(
+        "fused_with_embeddings", add_embeddings, fused=fusion, embedded=e_candidates
     )
 
-    # Apply MMR diversification to the scored candidate
-    def apply_mmrp(candidate_articles, interest_profile):
-        try:
-            config = MMRPConfig(num_slots=num_slots, theta=0.7)
-            result = MMRPDiversifier(config)(candidate_articles, interest_profile)
-            if result is None or not hasattr(result, "articles") or result.articles is None:
-                return RecommendationList(articles=[])
-            return result
-        except Exception:
-            return RecommendationList(articles=[])
+    builder.add_component("ranked", TopkRanker, {"num_slots": num_slots}, candidate_articles=fused_with_embeddings)
 
-    n_reranker = builder.add_component(
-        "reranker",
-        apply_mmrp,
-        candidate_articles=scored_candidates,
+    builder.add_component(
+        "reranked",
+        MMRPDiversifier,
+        {"num_slots": num_slots, "theta": 0.7},
+        candidate_articles=fused_with_embeddings,
         interest_profile=e_user,
     )
 
-    # Final recommendation using the MMR diversified results directly, with a safety wrapper
-    builder.add_component("recommender", final_recommender, candidate_articles=n_reranker)
+    builder.add_component(
+        "recommender",
+        MMRPDiversifier,
+        {"num_slots": num_slots, "theta": 0.7},
+        candidate_articles=fused_with_embeddings,
+        interest_profile=e_user,
+    )
+    # builder.add_component("recommender", all_outputs, ranked=ranked, reranked=reranked)
