@@ -88,5 +88,11 @@ def configure(builder: PipelineBuilder, num_slots: int, device: str):
         interest_profile=e_user,
     )
 
-    builder.add_component("recommender", TopkRanker, {"num_slots": num_slots}, candidate_articles=fused_with_embeddings)
+    builder.add_component(
+        "recommender",
+        MMRDiversifier,
+        {"num_slots": num_slots, "theta": 0.7},
+        candidate_articles=fused_with_embeddings,
+        interest_profile=e_user,
+    )
     # builder.add_component("recommender", all_outputs, ranked=ranked, reranked=reranked)
