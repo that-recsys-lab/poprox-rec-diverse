@@ -3,7 +3,7 @@ name: Test Docker
 on:
   push:
     branches:
-      - aishwarya/treatment1
+      - main
   pull_request:
 
 # override default shell for mamba activation
@@ -30,7 +30,7 @@ jobs:
           python-version: "3.12"
 
       - name: 📦 Set up dependencies
-        run: uv sync --no-default-groups --group=test --group=data --extra=cpu
+        run: uv sync --no-default-groups --group=test --group=data --group=cpu
 
       - name: Show DVC config
         run: dvc config --list
