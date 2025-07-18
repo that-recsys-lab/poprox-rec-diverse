@@ -23,7 +23,8 @@ def calculate_beta(candidate_articles: CandidateSet, interest_profile: InterestP
 
     for article_id in clicked_article_ids:
         topics = find_topic(past_articles, article_id)
-        all_topics.extend(topics)
+        if topics is not None:
+            all_topics.extend(topics)
 
     if all_topics:
         unique_topics, counts = np.unique(all_topics, return_counts=True)
@@ -58,7 +59,7 @@ class MMRPDiversifier(Component):
         return RecommendationList(articles=recommended)
 
 
-def compute_similarity_matrix(todays_article_vectors):
+def compute_similarity_matrix(todays_article_vectors: torch.Tensor) -> torch.Tensor:
     num_values = len(todays_article_vectors)
     # M is (n, k), where n = # articles & k = embed. dim.
     # M M^T is (n, n) matrix of pairwise dot products

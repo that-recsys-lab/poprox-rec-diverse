@@ -88,6 +88,7 @@ def configure(builder: PipelineBuilder, num_slots: int, device: str):
         interest_profile=e_user,
     )
 
+    # The final recommender component that the API expects
     builder.add_component(
         "recommender",
         MMRDiversifier,
@@ -95,4 +96,3 @@ def configure(builder: PipelineBuilder, num_slots: int, device: str):
         candidate_articles=fused_with_embeddings,
         interest_profile=e_user,
     )
-    # builder.add_component("recommender", all_outputs, ranked=ranked, reranked=reranked)
