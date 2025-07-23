@@ -3,7 +3,7 @@ name: Deploy
 on:
   push:
     branches:
-      - main
+      - aishwarya/treatment1
 
 # override default shell for mamba activation
 defaults:

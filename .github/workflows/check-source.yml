@@ -3,7 +3,7 @@ name: Validate Source
 on:
   push:
     branches:
-      - main
+      - aishwarya/treatment1
   pull_request:
 
 jobs:

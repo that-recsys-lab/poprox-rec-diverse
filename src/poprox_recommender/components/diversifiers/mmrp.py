@@ -1,3 +1,5 @@
+# Add imports for entropy calculation
+import numpy as np
 import torch
 from lenskit.pipeline import Component
 from pydantic import BaseModel
@@ -5,28 +7,55 @@ from pydantic import BaseModel
 from poprox_concepts.domain import CandidateSet, InterestProfile, RecommendationList
 from poprox_recommender.pytorch.datachecks import assert_tensor_size
 from poprox_recommender.pytorch.decorators import torch_inference
+from poprox_recommender.topics import find_topic
 
 
-class MMRConfig(BaseModel):
+class MMRPConfig(BaseModel):
     theta: float = 0.8
     num_slots: int = 10
 
 
-class MMRDiversifier(Component):
-    config: MMRConfig
+def calculate_beta(candidate_articles: CandidateSet, interest_profile: InterestProfile) -> float:
+    click_history = getattr(interest_profile, "click_history", [])
+    clicked_article_ids = [click.article_id for click in click_history]
+    past_articles = candidate_articles.articles
+    all_topics = []
+
+    for article_id in clicked_article_ids:
+        topics = find_topic(past_articles, article_id)
+        if topics is not None:
+            all_topics.extend(topics)
+
+    if all_topics:
+        unique_topics, counts = np.unique(all_topics, return_counts=True)
+        topic_weights = counts / counts.sum()
+        entropy = -np.sum(topic_weights * np.log(topic_weights + 1e-12))  # epsilon for log(0)
+        if len(unique_topics) > 1:
+            entropy /= np.log(len(unique_topics))
+        beta = entropy
+    else:
+        beta = 1.0
+
+    return beta
+
+
+class MMRPDiversifier(Component):
+    config: MMRPConfig
 
     @torch_inference
     def __call__(self, candidate_articles: CandidateSet, interest_profile: InterestProfile) -> RecommendationList:
+        beta = calculate_beta(candidate_articles, interest_profile)
+        theta = self.config.theta * beta
+
         if candidate_articles.scores is None:
             recommended = candidate_articles.articles
         else:
             similarity_matrix = compute_similarity_matrix(candidate_articles.embeddings)
 
             scores = torch.as_tensor(candidate_articles.scores).to(similarity_matrix.device)
-            article_indices = mmr_diversification(
-                scores, similarity_matrix, theta=self.config.theta, topk=self.config.num_slots
-            )
+            article_indices = mmrp_diversification(scores, similarity_matrix, theta=theta, topk=self.config.num_slots)
             recommended = [candidate_articles.articles[int(idx)] for idx in article_indices]
+
         return RecommendationList(articles=recommended)
 
 
@@ -39,7 +68,7 @@ def compute_similarity_matrix(todays_article_vectors: torch.Tensor) -> torch.Ten
     return similarity_matrix
 
 
-def mmr_diversification(rewards, similarity_matrix, theta: float, topk: int):
+def mmrp_diversification(rewards, similarity_matrix, theta: float, topk: int):
     # MR_i = \theta * reward_i - (1 - \theta)*max_{j \in S} sim(i, j) # S us
     # R is all candidates (not selected yet)
 

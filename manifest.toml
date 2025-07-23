@@ -1,0 +1,51 @@
+[experiment]
+id = "" # TODO: poprox to provide ID
+description = "Personalized diversity experiment"
+status = "draft"
+random.seed = 20250701
+start_date = "" # TODO
+duration = "35 days"
+
+[owner]
+team_id = "a3cc2bd4-c75e-4441-b147-c6692c063217" # TODO: poprox to provide ID
+team_name = "CU POPROX"
+members = [
+  "",
+  "",
+  "",
+] # TODO: poprox to provide members (Robin, Emanuele, Aishwarya)
+
+[users.groups.control]
+minimum_size = 40
+
+[users.groups.diversity_treatment]
+identical_to = "control"
+
+[users.groups.personalized_treatment]
+identical_to = "control"
+
+[recommenders.control]
+endpoint = "https://f2q9xa2fvl.execute-api.us-east-1.amazonaws.com?pipeline=control"
+
+[recommenders.TopicDiversity]
+endpoint = "https://f2q9xa2fvl.execute-api.us-east-1.amazonaws.com?pipeline=nrms-topic-mmr/"
+modifies = "ranking"
+
+[recommenders.PersonalizedDiversity]
+endpoint = "https://f2q9xa2fvl.execute-api.us-east-1.amazonaws.com?pipeline=nrms-topic-mmrp/"
+modifies = "ranking"
+
+[phases]
+sequence = ["1"]
+
+[phases.1]
+duration = "35 days"
+
+[phases.1.assignments.control]
+recommender = "control"
+
+[phases.1.assignments.diversity_treatment]
+recommender = "TopicDiversity"
+
+[phases.1.assignments.personalized_treatment]
+recommender = "PersonalizedDiversity"

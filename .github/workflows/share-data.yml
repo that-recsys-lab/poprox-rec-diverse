@@ -3,7 +3,7 @@ name: Update Shared Data
 on:
   push:
     branches:
-      - main
+      - aishwarya/treatment1
 
 jobs:
   share-data:
