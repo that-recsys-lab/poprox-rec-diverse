@@ -83,7 +83,7 @@ def configure(builder: PipelineBuilder, num_slots: int, device: str):
     builder.add_component(
         "reranker",
         MMRDiversifier,
-        {"num_slots": num_slots, "theta": 0.7},
+        {"num_slots": num_slots, "theta": 0.5},
         candidate_articles=fused_with_embeddings,
         interest_profile=e_user,
     )
@@ -92,7 +92,7 @@ def configure(builder: PipelineBuilder, num_slots: int, device: str):
     builder.add_component(
         "recommender",
         MMRDiversifier,
-        {"num_slots": num_slots, "theta": 0.7},
+        {"num_slots": num_slots, "theta": 0.5},
         candidate_articles=fused_with_embeddings,
         interest_profile=e_user,
     )
