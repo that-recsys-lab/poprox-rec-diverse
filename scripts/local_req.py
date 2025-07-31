@@ -24,11 +24,11 @@ if __name__ == "__main__":
         "queryStringParameters": {"pipeline": "nrms_topic_mmr"},
         "isBase64Encoded": False,
     }
-    event_mmr = {
-        "body": raw_json,
-        "queryStringParameters": {"pipeline": "mmr"},
-        "isBase64Encoded": False,
-    }
+    # event_mmr = {
+    #     "body": raw_json,
+    #     "queryStringParameters": {"pipeline": "mmr"},
+    #     "isBase64Encoded": False,
+    # }
     event_nrms_mmr_personalized = {
         "body": raw_json,
         "queryStringParameters": {"pipeline": "nrms_topic_mmr_personalized"},
@@ -46,8 +46,8 @@ if __name__ == "__main__":
     response_nrms_mmr = root(req.model_dump(), pipeline="nrms_topic_mmr")
     response_nrms_mmr = RecommendationResponseV2.model_validate(response_nrms_mmr)
 
-    response_mmr = root(req.model_dump(), pipeline="mmr")
-    response_mmr = RecommendationResponseV2.model_validate(response_mmr)
+    # response_mmr = root(req.model_dump(), pipeline="mmr")
+    # response_mmr = RecommendationResponseV2.model_validate(response_mmr)
 
     response_nrms_mmr_personalized = root(req.model_dump(), pipeline="nrms_topic_mmr_personalized")
     response_nrms_mmr_personalized = RecommendationResponseV2.model_validate(response_nrms_mmr_personalized)
@@ -69,12 +69,12 @@ if __name__ == "__main__":
         article_topics = extract_general_topics(article)
         print(f"{idx + 1}. {article.headline} {article_topics}")
 
-    print("\n")
-    print(f"{event_mmr['queryStringParameters']['pipeline']}")
+    # print("\n")
+    # print(f"{event_mmr['queryStringParameters']['pipeline']}")
 
-    for idx, article in enumerate(response_mmr.recommendations.articles):
-        article_topics = extract_general_topics(article)
-        print(f"{idx + 1}. {article.headline} {article_topics}")
+    # for idx, article in enumerate(response_mmr.recommendations.articles):
+    #     article_topics = extract_general_topics(article)
+    #     print(f"{idx + 1}. {article.headline} {article_topics}")
 
     print("\n")
     print(f"{event_nrms_mmr_personalized['queryStringParameters']['pipeline']}")
