@@ -7,6 +7,8 @@ vars:
       - nrms_topics_static
       - nrms_topic_mmr
       - nrms_topic_mmr_personalized
+      - nrms_topic_mmr_encoding
+      - mmre
 
 stages:
   # these are *foreach stages*: they have multiple versions, one for each pipeline.
