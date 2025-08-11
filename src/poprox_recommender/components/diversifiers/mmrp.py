@@ -1,4 +1,9 @@
 # Add imports for entropy calculation
+import json
+import logging
+import os
+from pathlib import Path
+
 import numpy as np
 import torch
 from lenskit.pipeline import Component
@@ -9,16 +14,62 @@ from poprox_recommender.pytorch.datachecks import assert_tensor_size
 from poprox_recommender.pytorch.decorators import torch_inference
 from poprox_recommender.topics import find_topic
 
+logger = logging.getLogger(__name__)
+
 
 class MMRPConfig(BaseModel):
     theta: float = 0.8
     num_slots: int = 10
 
 
-def calculate_beta(candidate_articles: CandidateSet, interest_profile: InterestProfile) -> float:
+def collect_beta_data(interest_profile: InterestProfile, beta: float, theta: float) -> dict:
+    """Collect beta data for logging and analysis."""
+    user_id = getattr(interest_profile, "user_id", "unknown")
+    profile_id = getattr(interest_profile, "profile_id", "unknown")
+    click_topic_counts = getattr(interest_profile, "click_topic_counts", {})
+
+    if click_topic_counts is None:
+        click_topic_counts = {}
+
+    user_id_str = str(user_id) if user_id != "unknown" else "unknown"
+    profile_id_str = str(profile_id) if profile_id != "unknown" else "unknown"
+
+    return {
+        "user_id": user_id_str,
+        "profile_id": profile_id_str,
+        "beta": beta,
+        "original_theta": 0.8,  # Default theta from MMRPConfig
+        "modified_theta": theta,
+        "click_count": click_topic_counts,
+    }
+
+
+def save_beta_to_file(beta_data: dict, output_dir: str = "outputs/mind-subset/nrms_topic_mmr_personalized"):
+    try:
+        output_path = Path(output_dir)
+        output_path.mkdir(parents=True, exist_ok=True)
+
+        beta_file = output_path / "beta_values.json"
+
+        existing_data = []
+        if beta_file.exists():
+            try:
+                with open(beta_file, "r") as f:
+                    existing_data = json.load(f)
+            except json.JSONDecodeError:
+                existing_data = []
+        existing_data.append(beta_data)
+        with open(beta_file, "w") as f:
+            json.dump(existing_data, f, indent=2)
+
+    except Exception as e:
+        logger.error(f"Error saving beta data: {e}")
+
+
+def calculate_beta(interest_profile: InterestProfile, interacted_articles: CandidateSet) -> float:
     click_history = getattr(interest_profile, "click_history", [])
     clicked_article_ids = [click.article_id for click in click_history]
-    past_articles = candidate_articles.articles
+    past_articles = interacted_articles.articles
     all_topics = []
 
     for article_id in clicked_article_ids:
@@ -30,8 +81,8 @@ def calculate_beta(candidate_articles: CandidateSet, interest_profile: InterestP
         unique_topics, counts = np.unique(all_topics, return_counts=True)
         topic_weights = counts / counts.sum()
         entropy = -np.sum(topic_weights * np.log(topic_weights + 1e-12))  # epsilon for log(0)
-        if len(unique_topics) > 1:
-            entropy /= np.log(len(unique_topics))
+        # if len(unique_topics) > 1:
+        #     entropy /= np.log(len(unique_topics))
         beta = entropy
     else:
         beta = 1.0
@@ -43,9 +94,15 @@ class MMRPDiversifier(Component):
     config: MMRPConfig
 
     @torch_inference
-    def __call__(self, candidate_articles: CandidateSet, interest_profile: InterestProfile) -> RecommendationList:
-        beta = calculate_beta(candidate_articles, interest_profile)
+    def __call__(
+        self, candidate_articles: CandidateSet, interest_profile: InterestProfile, interacted_articles: CandidateSet
+    ) -> RecommendationList:
+        beta = calculate_beta(interest_profile, interacted_articles)
         theta = self.config.theta * beta
+
+        beta_data = collect_beta_data(interest_profile, beta, theta)
+        output_dir = os.environ.get("POPROX_OUTPUT_DIR", "outputs/mind-subset/nrms_topic_mmr_personalized")
+        save_beta_to_file(beta_data, output_dir)
 
         if candidate_articles.scores is None:
             recommended = candidate_articles.articles

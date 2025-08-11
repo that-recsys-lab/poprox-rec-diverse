@@ -86,6 +86,7 @@ def configure(builder: PipelineBuilder, num_slots: int, device: str):
         {"num_slots": num_slots, "theta": 0.7},
         candidate_articles=fused_with_embeddings,
         interest_profile=e_user,
+        interacted_articles=i_clicked,
     )
 
     # The final recommender component that the API expects
@@ -95,4 +96,5 @@ def configure(builder: PipelineBuilder, num_slots: int, device: str):
         {"num_slots": num_slots, "theta": 0.7},
         candidate_articles=fused_with_embeddings,
         interest_profile=e_user,
+        interacted_articles=i_clicked,
     )

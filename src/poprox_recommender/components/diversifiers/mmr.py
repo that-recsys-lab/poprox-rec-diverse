@@ -21,7 +21,6 @@ class MMRDiversifier(Component):
             recommended = candidate_articles.articles
         else:
             similarity_matrix = compute_similarity_matrix(candidate_articles.embeddings)
-
             scores = torch.as_tensor(candidate_articles.scores).to(similarity_matrix.device)
             article_indices = mmr_diversification(
                 scores, similarity_matrix, theta=self.config.theta, topk=self.config.num_slots

@@ -41,7 +41,12 @@ def configure(builder: PipelineBuilder, num_slots: int, device: str):
     n_scorer = builder.add_component("scorer", ArticleScorer, candidate_articles=e_candidates, interest_profile=e_user)
     _n_topk = builder.add_component("ranker", TopkRanker, {"num_slots": num_slots}, candidate_articles=n_scorer)
     n_reranker = builder.add_component(
-        "reranker", MMRPDiversifier, {"num_slots": num_slots}, candidate_articles=n_scorer, interest_profile=e_user
+        "reranker",
+        MMRPDiversifier,
+        {"num_slots": num_slots},
+        candidate_articles=n_scorer,
+        interest_profile=e_user,
+        interacted_articles=i_clicked,
     )
 
     n_topic_filter = builder.add_component(
