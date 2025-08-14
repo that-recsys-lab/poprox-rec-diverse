@@ -22,14 +22,24 @@ class MMRPConfig(BaseModel):
     num_slots: int = 10
 
 
-def collect_beta_data(interest_profile: InterestProfile, beta: float, theta: float) -> dict:
+def collect_beta_data(
+    interest_profile: InterestProfile,
+    unique_topics: np.ndarray | None,
+    topic_counts: np.ndarray | None,
+    beta: float,
+    theta: float,
+) -> dict:
     """Collect beta data for logging and analysis."""
     user_id = getattr(interest_profile, "user_id", "unknown")
     profile_id = getattr(interest_profile, "profile_id", "unknown")
     click_topic_counts = getattr(interest_profile, "click_topic_counts", {})
-
-    if click_topic_counts is None:
+    if not click_topic_counts and unique_topics is not None and topic_counts is not None:
         click_topic_counts = {}
+        for topic, count in zip(unique_topics, topic_counts):
+            click_topic_counts[str(topic)] = int(count)
+
+    # if click_topic_counts is None:
+    #     click_topic_counts = {}
 
     user_id_str = str(user_id) if user_id != "unknown" else "unknown"
     profile_id_str = str(profile_id) if profile_id != "unknown" else "unknown"
@@ -66,7 +76,9 @@ def save_beta_to_file(beta_data: dict, output_dir: str = "outputs/mind-subset/nr
         logger.error(f"Error saving beta data: {e}")
 
 
-def calculate_beta(interest_profile: InterestProfile, interacted_articles: CandidateSet) -> float:
+def calculate_beta(
+    interest_profile: InterestProfile, interacted_articles: CandidateSet
+) -> tuple[float, np.ndarray | None, np.ndarray | None]:
     click_history = getattr(interest_profile, "click_history", [])
     clicked_article_ids = [click.article_id for click in click_history]
     past_articles = interacted_articles.articles
@@ -84,10 +96,10 @@ def calculate_beta(interest_profile: InterestProfile, interacted_articles: Candi
         # if len(unique_topics) > 1:
         #     entropy /= np.log(len(unique_topics))
         beta = entropy
+        return beta, unique_topics, counts
     else:
         beta = 1.0
-
-    return beta
+        return beta, None, None
 
 
 class MMRPDiversifier(Component):
@@ -97,10 +109,10 @@ class MMRPDiversifier(Component):
     def __call__(
         self, candidate_articles: CandidateSet, interest_profile: InterestProfile, interacted_articles: CandidateSet
     ) -> RecommendationList:
-        beta = calculate_beta(interest_profile, interacted_articles)
+        beta, unique_topics, topic_counts = calculate_beta(interest_profile, interacted_articles)
         theta = self.config.theta * beta
 
-        beta_data = collect_beta_data(interest_profile, beta, theta)
+        beta_data = collect_beta_data(interest_profile, unique_topics, topic_counts, beta, theta)
         output_dir = os.environ.get("POPROX_OUTPUT_DIR", "outputs/mind-subset/nrms_topic_mmr_personalized")
         save_beta_to_file(beta_data, output_dir)
 
