@@ -11,7 +11,7 @@ from lenskit.parallel.ray import init_cluster
 from lenskit.pipeline import PipelineState
 
 from poprox_concepts.api.recommendations import RecommendationRequest
-from poprox_concepts.domain import CandidateSet
+from poprox_concepts.domain import Article, CandidateSet
 from poprox_recommender.config import default_device
 from poprox_recommender.data.mind import TEST_REC_COUNT, MindData
 from poprox_recommender.evaluation.generate.outputs import (
@@ -64,7 +64,7 @@ def generate_profile_recs(dataset: MindData, outs: RecOutputs, pipeline: str, n_
         logger.info("recommendation took %s CPU", pretty_time(cpu))
 
 
-def serial_recommend(pipeline: str, profiles: Iterator[RecommendationRequest], outs: RecOutputs, pb: Progress):
+def serial_recommend(pipeline: str, requests: Iterator[RecommendationRequest], outs: RecOutputs, pb: Progress):
     logger.info("starting serial evaluation")
     # directly call things in-process
     writers: list[RecommendationWriter] = [
@@ -73,7 +73,7 @@ def serial_recommend(pipeline: str, profiles: Iterator[RecommendationRequest], o
         EmbeddingWriter(outs),
     ]
 
-    for request in profiles:
+    for request in requests:
         state = recommend_for_profile(pipeline, request)
         for w in writers:
             w.write_recommendations(request, state)
@@ -164,8 +164,8 @@ def recommend_for_profile(pipeline: str, request: RecommendationRequest) -> Pipe
         )
 
     inputs = {
-        "candidate": CandidateSet(articles=request.todays_articles),
-        "clicked": CandidateSet(articles=request.past_articles),
+        "candidate": request.candidates,
+        "clicked": request.interacted,
         "profile": request.interest_profile,
     }
 

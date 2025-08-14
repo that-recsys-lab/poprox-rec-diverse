@@ -16,7 +16,7 @@ from lenskit.logging import Task, get_logger
 from lenskit.pipeline import PipelineState
 from pydantic import BaseModel
 
-from poprox_concepts.api.recommendations import RecommendationRequest
+from poprox_concepts.api.recommendations.v2 import RecommendationRequestV2
 from poprox_concepts.domain import CandidateSet, RecommendationList
 from poprox_recommender.evaluation.writer import ParquetBatchedWriter
 
@@ -24,7 +24,7 @@ logger = get_logger(__name__)
 
 
 class OfflineRecommendations(BaseModel):
-    request: RecommendationRequest
+    request: RecommendationRequestV2
     results: OfflineRecResults
 
 
