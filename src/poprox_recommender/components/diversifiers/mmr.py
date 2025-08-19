@@ -34,6 +34,8 @@ def compute_similarity_matrix(todays_article_vectors: torch.Tensor) -> torch.Ten
     # M is (n, k), where n = # articles & k = embed. dim.
     # M M^T is (n, n) matrix of pairwise dot products
     similarity_matrix = todays_article_vectors @ todays_article_vectors.T
+    # Apply sigmoid function to the dot product similarity scores
+    similarity_matrix = torch.sigmoid(similarity_matrix)
     assert_tensor_size(similarity_matrix, num_values, num_values, label="sim-matrix", prefix=False)
     return similarity_matrix
 

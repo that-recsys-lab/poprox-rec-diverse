@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import json
 import logging
-import math
 from typing import Generator
 from uuid import UUID
 
@@ -134,6 +133,24 @@ class PoproxData(EvalData):
         article_row = self.articles_df.loc[str(article_id)]
         mention_rows = self.mentions_df[self.mentions_df["article_id"] == article_row.article_id]
         return self.convert_row_to_article(article_row, mention_rows)
+
+    def lookup_article(self, *, id: str | None = None, uuid: UUID | None = None):
+        """
+        Lookup article by either id or uuid. This method matches the interface expected by the evaluation metrics.
+        For POPROX data, we only support UUID lookups, so the id parameter is ignored.
+        """
+        if uuid is None:
+            if id:
+                # Convert string id to UUID if needed - for POPROX we expect UUIDs
+                try:
+                    uuid = UUID(id)
+                except ValueError:
+                    raise ValueError(f"Invalid UUID format: {id}")
+            else:
+                raise ValueError("must provide one of uuid, id")
+
+        # Use the existing lookup_candidate_article method
+        return self.lookup_candidate_article(uuid)
 
     def lookup_clicked_article(self, article_id: UUID):
         try:

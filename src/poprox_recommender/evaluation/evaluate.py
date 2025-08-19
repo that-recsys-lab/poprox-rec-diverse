@@ -108,7 +108,7 @@ def main():
     else:
         eval_data = MindData(options["--mind-data"])
 
-        eval_name = options["EVAL"]
+    eval_name = options["EVAL"]
     pipe_name = options["PIPELINE"]
     logger.info("measuring evaluation %s for %s", eval_name, pipe_name)
     recs_fn = project_root() / "outputs" / eval_name / pipe_name / "recommendations.parquet"
