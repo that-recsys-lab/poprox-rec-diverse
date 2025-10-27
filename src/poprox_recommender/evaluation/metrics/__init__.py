@@ -27,7 +27,7 @@ def load_embeddings_cache():
         try:
             possible_paths = [
                 # "outputs/mind-subset/control/embeddings.parquet",  # This one works
-                "outputs/mind-subset/nrms_topic_mmr/embeddings.parquet",  # Now this works
+                "outputs/poprox/nrms_topic_mmr/embeddings.parquet",  # Now this works
                 "outputs/mind-subset/embeddings.parquet",
             ]
 
@@ -71,7 +71,6 @@ class ProfileRecs(NamedTuple):
 def convert_df_to_article_set(rec_df, eval_data=None):
     articles = []
     embeddings_cache = load_embeddings_cache()
-
     for _, row in rec_df.iterrows():
         if eval_data is not None:
             article = eval_data.lookup_article(uuid=UUID(row["item_id"]))

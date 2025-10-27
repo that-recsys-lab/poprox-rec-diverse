@@ -2,17 +2,18 @@
 import json
 import logging
 import os
+from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
 import torch
 from lenskit.pipeline import Component
 from pydantic import BaseModel
+from scipy.spatial import distance
 
 from poprox_concepts.domain import CandidateSet, InterestProfile, RecommendationList
 from poprox_recommender.pytorch.datachecks import assert_tensor_size
 from poprox_recommender.pytorch.decorators import torch_inference
-from poprox_recommender.topics import find_topic
 
 logger = logging.getLogger(__name__)
 
@@ -24,37 +25,26 @@ class MMRPConfig(BaseModel):
 
 def collect_beta_data(
     interest_profile: InterestProfile,
-    unique_topics: np.ndarray | None,
-    topic_counts: np.ndarray | None,
+    topic_interest_probability_profile: np.ndarray | None,
+    topic_availability_probability_profile: np.ndarray | None,
     beta: float,
+    original_theta: float,
     theta: float,
 ) -> dict:
     """Collect beta data for logging and analysis."""
-    user_id = getattr(interest_profile, "user_id", "unknown")
+    onboarding = getattr(interest_profile, "onboarding_topics", "unknown")
     profile_id = getattr(interest_profile, "profile_id", "unknown")
-    click_topic_counts = getattr(interest_profile, "click_topic_counts", {})
-    if not click_topic_counts and unique_topics is not None and topic_counts is not None:
-        click_topic_counts = {}
-        for topic, count in zip(unique_topics, topic_counts):
-            click_topic_counts[str(topic)] = int(count)
-
-    # if click_topic_counts is None:
-    #     click_topic_counts = {}
-
-    user_id_str = str(user_id) if user_id != "unknown" else "unknown"
     profile_id_str = str(profile_id) if profile_id != "unknown" else "unknown"
+    account_id_str = str(onboarding[0].account_id) if onboarding[0].account_id != "unknown" else "unknown"
 
     return {
-        "user_id": user_id_str,
+        "account_id": account_id_str,
         "profile_id": profile_id_str,
         "beta": beta,
-        "original_theta": 0.8,  # Default theta from MMRPConfig
-        "modified_theta": theta,
-        "click_count": click_topic_counts,
     }
 
 
-def save_beta_to_file(beta_data: dict, output_dir: str = "outputs/mind-subset/nrms_topic_mmr_personalized"):
+def save_beta_to_file(beta_data: dict, output_dir: str = "outputs/poprox/nrms_topic_mmr_personalized"):
     try:
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
@@ -76,30 +66,40 @@ def save_beta_to_file(beta_data: dict, output_dir: str = "outputs/mind-subset/nr
         logger.error(f"Error saving beta data: {e}")
 
 
+def compute_topic_dist(interest_profile):
+    topic_preferences: dict[str, int] = defaultdict(int)
+    for interest in interest_profile.onboarding_topics:
+        topic_preferences[interest.entity_name] = interest.preference
+    normalized_topic_prefs = {k: v / 14 for k, v in topic_preferences.items()}  # changed
+    return normalized_topic_prefs
+
+
 def calculate_beta(
     interest_profile: InterestProfile, interacted_articles: CandidateSet
 ) -> tuple[float, np.ndarray | None, np.ndarray | None]:
-    click_history = getattr(interest_profile, "click_history", [])
-    clicked_article_ids = [click.article_id for click in click_history]
-    past_articles = interacted_articles.articles
-    all_topics = []
+    mu = 0.1265
+    sigma = 0.0446
 
-    for article_id in clicked_article_ids:
-        topics = find_topic(past_articles, article_id)
-        if topics is not None:
-            all_topics.extend(topics)
+    topic_interest_dist = compute_topic_dist(interest_profile)
+    topic_interest_probability_profile = list(
+        topic_interest_dist.values()
+    )  # some of them have 13 topics instead of 14 so padding with 0
 
-    if all_topics:
-        unique_topics, counts = np.unique(all_topics, return_counts=True)
-        topic_weights = counts / counts.sum()
-        entropy = -np.sum(topic_weights * np.log(topic_weights + 1e-12))  # epsilon for log(0)
-        # if len(unique_topics) > 1:
-        #     entropy /= np.log(len(unique_topics))
-        beta = entropy
-        return beta, unique_topics, counts
-    else:
-        beta = 1.0
-        return beta, None, None
+    if len(topic_interest_probability_profile) < 14:
+        topic_interest_probability_profile.extend([0] * (14 - len(topic_interest_probability_profile)))
+    topic_interest_probability_profile = np.array(topic_interest_probability_profile)
+    topic_availability_probability_profile = np.array([1 / 14] * 14)
+
+    # high beta_raw = distance is high = topic pref is far from uniform = low diversity tolerace = low diversity
+    # low beta_raw = distance is low = topic pref is close to uniform = high diversity tolerace = high diversity
+
+    beta_raw = distance.jensenshannon(topic_interest_probability_profile, topic_availability_probability_profile)
+
+    # high beta_raw = +ve beta
+    # low beta_raw = -ve beta
+    beta = ((beta_raw) - mu) / sigma  # z-score
+
+    return beta, topic_interest_probability_profile, topic_availability_probability_profile
 
 
 class MMRPDiversifier(Component):
@@ -109,11 +109,26 @@ class MMRPDiversifier(Component):
     def __call__(
         self, candidate_articles: CandidateSet, interest_profile: InterestProfile, interacted_articles: CandidateSet
     ) -> RecommendationList:
-        beta, unique_topics, topic_counts = calculate_beta(interest_profile, interacted_articles)
-        theta = self.config.theta * beta
+        beta, topic_interest_probability_profile, topic_availability_probability_profile = calculate_beta(
+            interest_profile, interacted_articles
+        )
 
-        beta_data = collect_beta_data(interest_profile, unique_topics, topic_counts, beta, theta)
-        output_dir = os.environ.get("POPROX_OUTPUT_DIR", "outputs/mind-subset/nrms_topic_mmr_personalized")
+        # high theta = low diversity
+        # low theta = high diversity
+
+        # what does theta >1 mean?
+        theta = self.config.theta * (1 + (beta * 0.5))  # theta_p change
+        theta = np.clip(theta, 0, 1)  # keeping theta between 0-1
+
+        beta_data = collect_beta_data(
+            interest_profile,
+            topic_interest_probability_profile,
+            topic_availability_probability_profile,
+            beta,
+            self.config.theta,
+            theta,
+        )
+        output_dir = os.environ.get("POPROX_OUTPUT_DIR", "outputs/poprox/nrms_topic_mmr_personalized")
         save_beta_to_file(beta_data, output_dir)
 
         if candidate_articles.scores is None:

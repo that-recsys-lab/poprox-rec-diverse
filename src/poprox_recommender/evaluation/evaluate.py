@@ -88,7 +88,7 @@ def profile_eval_results(eval_data: EvalData, profile_recs: pd.DataFrame) -> Ite
                 yield from ray.get(rr)
 
     else:
-        for profile in rec_profiles(eval_data, profile_recs):
+        for profile in profiles:
             yield measure_profile_recs(profile, eval_data)
 
 

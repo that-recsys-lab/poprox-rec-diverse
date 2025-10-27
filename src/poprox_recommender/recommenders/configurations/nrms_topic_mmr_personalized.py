@@ -78,12 +78,12 @@ def configure(builder: PipelineBuilder, num_slots: int, device: str):
         "fused_with_embeddings", add_embeddings, fused=fusion, embedded=e_candidates
     )
 
-    builder.add_component("ranker", TopkRanker, {"num_slots": num_slots}, candidate_articles=fused_with_embeddings)
+    builder.add_component("ranker", TopkRanker, {"num_slots": 100}, candidate_articles=fused_with_embeddings)
 
     builder.add_component(
         "reranker",
         MMRPDiversifier,
-        {"num_slots": num_slots, "theta": 0.7},
+        {"num_slots": num_slots, "theta": 0.6},
         candidate_articles=fused_with_embeddings,
         interest_profile=e_user,
         interacted_articles=i_clicked,
@@ -93,7 +93,7 @@ def configure(builder: PipelineBuilder, num_slots: int, device: str):
     builder.add_component(
         "recommender",
         MMRPDiversifier,
-        {"num_slots": num_slots, "theta": 0.7},
+        {"num_slots": num_slots, "theta": 0.6},
         candidate_articles=fused_with_embeddings,
         interest_profile=e_user,
         interacted_articles=i_clicked,

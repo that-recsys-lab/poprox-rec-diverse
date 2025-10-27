@@ -49,7 +49,7 @@ def mmr_diversification(rewards, similarity_matrix, theta: float, topk: int):
     # first recommended item
     S[0] = rewards.argmax()
 
-    for k in range(1, topk):
+    for k in range(1, min(topk, len(rewards))):
         # find the best combo of reward and max sim to existing item
         # first, let's pare the matrix: candidates on rows, selected items on cols
         Sset = S[S >= 0]
@@ -74,3 +74,7 @@ def mmr_diversification(rewards, similarity_matrix, theta: float, topk: int):
         S[k] = torch.argmax(scores)
 
     return S[S >= 0].tolist()
+
+
+# T1 = max ( (1- theta) r(u, i) + theta * max (1-sim(i,j)))
+# T2 = (1- (theta * (1-beta))) r(u, i) + (theta*(1-beta)) * max (1-sim(i,j))
