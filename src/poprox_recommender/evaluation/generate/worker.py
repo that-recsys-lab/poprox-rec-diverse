@@ -11,7 +11,6 @@ from lenskit.parallel.ray import init_cluster
 from lenskit.pipeline import PipelineState
 
 from poprox_concepts.api.recommendations import RecommendationRequest
-from poprox_concepts.domain import Article, CandidateSet
 from poprox_recommender.config import default_device
 from poprox_recommender.data.mind import TEST_REC_COUNT, MindData
 from poprox_recommender.evaluation.generate.outputs import (
