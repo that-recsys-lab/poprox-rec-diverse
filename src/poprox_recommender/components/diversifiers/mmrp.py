@@ -35,7 +35,10 @@ def collect_beta_data(
     onboarding = getattr(interest_profile, "onboarding_topics", "unknown")
     profile_id = getattr(interest_profile, "profile_id", "unknown")
     profile_id_str = str(profile_id) if profile_id != "unknown" else "unknown"
-    account_id_str = str(onboarding[0].account_id) if onboarding[0].account_id != "unknown" else "unknown"
+    if onboarding and hasattr(onboarding[0], "account_id"):
+        account_id_str = str(onboarding[0].account_id)
+    else:
+        account_id_str = "unknown"
 
     return {
         "account_id": account_id_str,
