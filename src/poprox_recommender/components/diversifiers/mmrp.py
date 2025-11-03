@@ -80,8 +80,8 @@ def compute_topic_dist(interest_profile):
 def calculate_beta(
     interest_profile: InterestProfile, interacted_articles: CandidateSet
 ) -> tuple[float, np.ndarray | None, np.ndarray | None]:
-    mu = 0.1265
-    sigma = 0.0446
+    mu = 0.0832
+    sigma = 1.5775
 
     topic_interest_dist = compute_topic_dist(interest_profile)
     topic_interest_probability_profile = list(
@@ -120,7 +120,7 @@ class MMRPDiversifier(Component):
         # low theta = high diversity
 
         # what does theta >1 mean?
-        theta = self.config.theta * (1 + (beta * 0.5))  # theta_p change
+        theta = self.config.theta * (1 + (beta * 0.35))  # theta_p change
         theta = np.clip(theta, 0, 1)  # keeping theta between 0-1
 
         beta_data = collect_beta_data(
