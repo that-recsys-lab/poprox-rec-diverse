@@ -114,14 +114,22 @@ def measure_profile_recs(profile: ProfileRecs, eval_data: EvalData | None = None
     truth = truth.reset_index()
 
     truth = truth[truth["rating"] > 0]
-    truth = ItemList.from_df(truth)
+    if truth.empty:
+        truth_list = None
+    else:
+        truth_list = ItemList.from_df(truth)
 
     final_rec_df = recs[recs["stage"] == "final"]
     final_rec = ItemList.from_df(final_rec_df)
 
-    single_rr = call_metric(RecipRank, final_rec, truth)
-    single_ndcg5 = call_metric(NDCG, final_rec, truth, k=5)
-    single_ndcg10 = call_metric(NDCG, final_rec, truth, k=10)
+    if truth_list is not None:
+        single_rr = call_metric(RecipRank, final_rec, truth_list)
+        single_ndcg5 = call_metric(NDCG, final_rec, truth_list, k=5)
+        single_ndcg10 = call_metric(NDCG, final_rec, truth_list, k=10)
+    else:
+        single_rr = None
+        single_ndcg5 = None
+        single_ndcg10 = None
 
     ranked_rec_df = recs[recs["stage"] == "ranked"]
     ranked = convert_df_to_article_set(ranked_rec_df, eval_data)
@@ -161,9 +169,9 @@ def measure_profile_recs(profile: ProfileRecs, eval_data: EvalData | None = None
         # whole function should be revised for generality when we want to support
         # other pipelines.
         "personalized": len(ranked.articles) > 0,
-        "NDCG@5": single_ndcg5,
-        "NDCG@10": single_ndcg10,
-        "RR": single_rr,
+        "NDCG@5": single_ndcg5 if single_ndcg5 is not None else np.nan,
+        "NDCG@10": single_ndcg10 if single_ndcg10 is not None else np.nan,
+        "RR": single_rr if single_rr is not None else np.nan,
         "RBO@5": single_rbo5,
         "RBO@10": single_rbo10,
         "rank_based_entropy": rbe,

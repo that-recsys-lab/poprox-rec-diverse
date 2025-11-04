@@ -74,18 +74,18 @@ class PoproxData(EvalData):
 
     def iter_profiles(self) -> Generator[RecommendationRequestV2]:
         newsletters_df = self.newsletters_df.copy()
-        newsletters_df["account_id_alias"] = newsletters_df["profile_id"].astype(str)
+        newsletters_df["account_id_alias"] = newsletters_df["account_id"].astype(str)
 
         unique_accounts_df = newsletters_df.drop_duplicates(subset=["account_id_alias"]).reset_index(drop=True)
         logger.info(f"Found {len(unique_accounts_df)} unique accounts for recommendation generation")
 
         for _, row in unique_accounts_df.iterrows():
             newsletter_id = row["newsletter_id"]
-            profile_id = row["profile_id"]
+            profile_id = row["account_id"]
             newsletter_created_at = row["created_at"]
 
             # Filter clicks to those before the newsletter
-            profile_clicks_df = self.clicks_df.loc[self.clicks_df["profile_id"] == profile_id]
+            profile_clicks_df = self.clicks_df.loc[self.clicks_df["account_id"] == profile_id]
             # TODO: Change `timestamp` to `clicked_at` in the export
             filtered_clicks_df = profile_clicks_df[profile_clicks_df["clicked_at"] < newsletter_created_at]
 
