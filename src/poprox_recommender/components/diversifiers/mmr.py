@@ -21,21 +21,21 @@ class MMRDiversifier(Component):
             recommended = candidate_articles.articles
         else:
             similarity_matrix = compute_similarity_matrix(candidate_articles.embeddings)
-
             scores = torch.as_tensor(candidate_articles.scores).to(similarity_matrix.device)
             article_indices = mmr_diversification(
                 scores, similarity_matrix, theta=self.config.theta, topk=self.config.num_slots
             )
             recommended = [candidate_articles.articles[int(idx)] for idx in article_indices]
-
         return RecommendationList(articles=recommended)
 
 
-def compute_similarity_matrix(todays_article_vectors):
+def compute_similarity_matrix(todays_article_vectors: torch.Tensor) -> torch.Tensor:
     num_values = len(todays_article_vectors)
     # M is (n, k), where n = # articles & k = embed. dim.
     # M M^T is (n, n) matrix of pairwise dot products
     similarity_matrix = todays_article_vectors @ todays_article_vectors.T
+    # Apply sigmoid function to the dot product similarity scores
+    similarity_matrix = torch.sigmoid(similarity_matrix)
     assert_tensor_size(similarity_matrix, num_values, num_values, label="sim-matrix", prefix=False)
     return similarity_matrix
 
@@ -49,7 +49,7 @@ def mmr_diversification(rewards, similarity_matrix, theta: float, topk: int):
     # first recommended item
     S[0] = rewards.argmax()
 
-    for k in range(1, topk):
+    for k in range(1, min(topk, len(rewards))):
         # find the best combo of reward and max sim to existing item
         # first, let's pare the matrix: candidates on rows, selected items on cols
         Sset = S[S >= 0]
@@ -74,3 +74,7 @@ def mmr_diversification(rewards, similarity_matrix, theta: float, topk: int):
         S[k] = torch.argmax(scores)
 
     return S[S >= 0].tolist()
+
+
+# T1 = max ( (1- theta) r(u, i) + theta * max (1-sim(i,j)))
+# T2 = (1- (theta * (1-beta))) r(u, i) + (theta*(1-beta)) * max (1-sim(i,j))

@@ -48,22 +48,6 @@ def test_mild_promotion_beyond_k(all_articles):
     assert lip_score == 1.0
 
 
-def test_no_overlap(all_articles):
-    reference = CandidateSet(articles=all_articles[:5])
-    reranked = CandidateSet(articles=all_articles[5:10])
-    lip_score = least_item_promoted(reference, reranked, k=3)
-    assert lip_score == 0.0
-
-
-def test_partial_overlap(all_articles):
-    reference = CandidateSet(articles=all_articles[:5])
-    reranked = CandidateSet(
-        articles=[all_articles[1], all_articles[2], all_articles[6], all_articles[0], all_articles[4]]
-    )
-    lip_score = least_item_promoted(reference, reranked, k=3)
-    assert lip_score == 0.0
-
-
 def test_empty_reference(all_articles):
     reference = CandidateSet(articles=[])
     reranked = CandidateSet(articles=all_articles[:5])

@@ -1,0 +1,47 @@
+[experiment]
+# this ID is provided by POPROX when you register an experiment
+id = "059f41c8-5d62-4575-929a-a723b3efcdd9"
+# a short description that will appear in POPROX dashboards, etc.
+description = "Personalized diversity experiment"
+start_date = "2025-11-04"
+duration = "35 days"
+
+[owner]
+team_id = "a3cc2bd4-c75e-4441-b147-c6692c063217"
+team_name = "CU POPROX"
+members = ["robin.burke@colorado.edu", "Aishwarya.Satwani@colorado.edu"]
+
+[users.groups.control]
+minimum_size = 40
+
+[users.groups.diversity]
+identical_to = "control"
+minimum_size = 40
+
+[users.groups.personalized]
+identical_to = "control"
+minimum_size = 40
+
+[recommenders.control]
+endpoint = "https://f2q9xa2fvl.execute-api.us-east-1.amazonaws.com?pipeline=control"
+
+[recommenders.TopicDiversity]
+endpoint = "https://f2q9xa2fvl.execute-api.us-east-1.amazonaws.com?pipeline=nrms-topic-mmr"
+
+[recommenders.PersonalizedDiversity]
+endpoint = "https://f2q9xa2fvl.execute-api.us-east-1.amazonaws.com?pipeline=nrms-topic-mmr-personalized"
+
+[phases]
+sequence = ["1"]
+
+[phases.1]
+duration = "35 days"
+
+[phases.1.assignments.control]
+recommender = "control"
+
+[phases.1.assignments.diversity]
+recommender = "nrms-topic-mmr"
+
+[phases.1.assignments.personalized]
+recommender = "nrms-topic-mmr-personalized"

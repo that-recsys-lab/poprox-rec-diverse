@@ -14,37 +14,38 @@ if __name__ == "__main__":
         raw_json = req_file.read()
         req = RecommendationRequestV2.model_validate_json(raw_json)
 
-    event_nrms = {
-        "body": raw_json,
-        "queryStringParameters": {"pipeline": "nrms"},
-        "isBase64Encoded": False,
-    }
     event_topic_score = {
         "body": raw_json,
-        "queryStringParameters": {"pipeline": "nrms_topic_scores"},
+        "queryStringParameters": {"pipeline": "control"},
         "isBase64Encoded": False,
     }
-    event_feedback_score = {
+    event_nrms_mmr = {
         "body": raw_json,
-        "queryStringParameters": {"pipeline": "nrms_article_feedback"},
+        "queryStringParameters": {"pipeline": "nrms_topic_mmr"},
+        "isBase64Encoded": False,
+    }
+    event_nrms_mmr_personalized = {
+        "body": raw_json,
+        "queryStringParameters": {"pipeline": "nrms_topic_mmr_personalized"},
+        "isBase64Encoded": False,
+    }
+    event_mmrp = {
+        "body": raw_json,
+        "queryStringParameters": {"pipeline": "mmrp"},
         "isBase64Encoded": False,
     }
 
-    response_nrms = root(req.model_dump(), pipeline="nrms")
-    response_nrms = RecommendationResponseV2.model_validate(response_nrms)
-
-    response_topic_score = root(req.model_dump(), pipeline="nrms_topic_scores")
+    response_topic_score = root(req.model_dump(), pipeline="control")
     response_topic_score = RecommendationResponseV2.model_validate(response_topic_score)
 
-    response_feedback_score = root(req.model_dump(), pipeline="nrms_article_feedback")
-    response_feedback_score = RecommendationResponseV2.model_validate(response_feedback_score)
+    response_nrms_mmr = root(req.model_dump(), pipeline="nrms_topic_mmr")
+    response_nrms_mmr = RecommendationResponseV2.model_validate(response_nrms_mmr)
 
-    print("\n")
-    print(f"{event_nrms['queryStringParameters']['pipeline']}")
+    response_nrms_mmr_personalized = root(req.model_dump(), pipeline="nrms_topic_mmr_personalized")
+    response_nrms_mmr_personalized = RecommendationResponseV2.model_validate(response_nrms_mmr_personalized)
 
-    for idx, article in enumerate(response_nrms.recommendations.articles):
-        article_topics = extract_general_topics(article)
-        print(f"{idx + 1}. {article.headline} {article_topics}")
+    response_mmrp = root(req.model_dump(), pipeline="mmrp")
+    response_mmrp = RecommendationResponseV2.model_validate(response_mmrp)
 
     print("\n")
     print(f"{event_topic_score['queryStringParameters']['pipeline']}")
@@ -54,8 +55,22 @@ if __name__ == "__main__":
         print(f"{idx + 1}. {article.headline} {article_topics}")
 
     print("\n")
-    print(f"{event_feedback_score['queryStringParameters']['pipeline']}")
+    print(f"{event_nrms_mmr['queryStringParameters']['pipeline']}")
 
-    for idx, article in enumerate(response_feedback_score.recommendations.articles):
+    for idx, article in enumerate(response_nrms_mmr.recommendations.articles):
+        article_topics = extract_general_topics(article)
+        print(f"{idx + 1}. {article.headline} {article_topics}")
+
+    print("\n")
+    print(f"{event_nrms_mmr_personalized['queryStringParameters']['pipeline']}")
+
+    for idx, article in enumerate(response_nrms_mmr_personalized.recommendations.articles):
+        article_topics = extract_general_topics(article)
+        print(f"{idx + 1}. {article.headline} {article_topics}")
+
+    print("\n")
+    print(f"{event_mmrp['queryStringParameters']['pipeline']}")
+
+    for idx, article in enumerate(response_mmrp.recommendations.articles):
         article_topics = extract_general_topics(article)
         print(f"{idx + 1}. {article.headline} {article_topics}")

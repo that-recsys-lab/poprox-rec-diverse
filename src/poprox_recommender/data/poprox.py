@@ -7,10 +7,10 @@ from __future__ import annotations
 
 import json
 import logging
-import math
 from typing import Generator
 from uuid import UUID
 
+import numpy as np
 import pandas as pd
 
 from poprox_concepts import AccountInterest, Article, Click, Entity, InterestProfile, Mention
@@ -35,7 +35,10 @@ class PoproxData(EvalData):
             interests_df,
         ) = load_poprox_frames(archive)
 
-        self.newsletters_df = newsletters_df
+        rng = np.random.default_rng()  # get numpy Generator
+        perm = np.arange(len(newsletters_df))
+        rng.shuffle(perm)
+        self.newsletters_df = newsletters_df.iloc[perm]
 
         # index data frames for quick lookup of users & articles
         self.mentions_df = mentions_df
@@ -50,6 +53,7 @@ class PoproxData(EvalData):
             logger.warning("clicked article data has non-unique index")
 
         self.interests_df = interests_df
+        self.name = "POPROX"
 
     @property
     def n_profiles(self) -> int:
@@ -69,18 +73,21 @@ class PoproxData(EvalData):
         return pd.DataFrame({"item_id": clicked_items, "rating": [1.0] * len(clicked_items)}).set_index("item_id")
 
     def iter_profiles(self) -> Generator[RecommendationRequestV2]:
-        newsletter_ids = self.newsletters_df["newsletter_id"].unique()
+        newsletters_df = self.newsletters_df.copy()
+        newsletters_df["account_id_alias"] = newsletters_df["account_id"].astype(str)
 
-        for newsletter_id in newsletter_ids:
-            impressions_df = self.newsletters_df.loc[self.newsletters_df["newsletter_id"] == newsletter_id]
-            # TODO: Change `account_id` to `profile_id` in the export
-            profile_id = impressions_df.iloc[0]["account_id"]
-            newsletter_created_at = impressions_df.iloc[0]["created_at"]
+        unique_accounts_df = newsletters_df.drop_duplicates(subset=["account_id_alias"]).reset_index(drop=True)
+        logger.info(f"Found {len(unique_accounts_df)} unique accounts for recommendation generation")
+
+        for _, row in unique_accounts_df.iterrows():
+            newsletter_id = row["newsletter_id"]
+            profile_id = row["account_id"]
+            newsletter_created_at = row["created_at"]
 
             # Filter clicks to those before the newsletter
-            profile_clicks_df = self.clicks_df.loc[self.clicks_df["profile_id"] == profile_id]
-            # TODO: Change `timestamp` to `created_at` in the export
-            filtered_clicks_df = profile_clicks_df[profile_clicks_df["timestamp"] < newsletter_created_at]
+            profile_clicks_df = self.clicks_df.loc[self.clicks_df["account_id"] == profile_id]
+            # TODO: Change `timestamp` to `clicked_at` in the export
+            filtered_clicks_df = profile_clicks_df[profile_clicks_df["clicked_at"] < newsletter_created_at]
 
             # Create Article and Click objects from dataframe rows
             clicks = []
@@ -94,26 +101,27 @@ class PoproxData(EvalData):
                         Click(
                             article_id=article_row.article_id,
                             newsletter_id=article_row.newsletter_id,
-                            timestamp=article_row.timestamp,
+                            timestamp=article_row.clicked_at,
                         )
                     )
 
             interests = self.interests_df.loc[self.interests_df["account_id"] == profile_id]
-            topics = []
-            for interest in interests.itertuples():
-                topics.append(
-                    AccountInterest(
-                        account_id=profile_id,
-                        entity_id=interest.entity_id,
-                        entity_name=interest.entity_name,
-                        preference=interest.preference,
-                        frequency=interest.frequency if not math.isnan(interest.frequency) else -1,
-                    )
+            topics = [
+                AccountInterest(
+                    account_id=profile_id,
+                    entity_id=interest.entity_id,
+                    entity_name=interest.entity_name,
+                    preference=interest.preference,
                 )
+                for interest in interests.itertuples()
+            ]
 
-            profile = InterestProfile(profile_id=newsletter_id, click_history=clicks, onboarding_topics=topics)
-
-            # Filter candidate articles to those ingested on the same day as the newsletter (today's articles)
+            profile = InterestProfile(
+                profile_id=newsletter_id,
+                click_history=clicks,
+                onboarding_topics=topics,
+            )
+            profile.account_id_alias = str(profile_id)
             candidate_articles = []
             newsletter_date = newsletter_created_at.date()
 
@@ -133,6 +141,24 @@ class PoproxData(EvalData):
         article_row = self.articles_df.loc[str(article_id)]
         mention_rows = self.mentions_df[self.mentions_df["article_id"] == article_row.article_id]
         return self.convert_row_to_article(article_row, mention_rows)
+
+    def lookup_article(self, *, id: str | None = None, uuid: UUID | None = None):
+        """
+        Lookup article by either id or uuid. This method matches the interface expected by the evaluation metrics.
+        For POPROX data, we only support UUID lookups, so the id parameter is ignored.
+        """
+        if uuid is None:
+            if id:
+                # Convert string id to UUID if needed - for POPROX we expect UUIDs
+                try:
+                    uuid = UUID(id)
+                except ValueError:
+                    raise ValueError(f"Invalid UUID format: {id}")
+            else:
+                raise ValueError("must provide one of uuid, id")
+
+        # Use the existing lookup_candidate_article method
+        return self.lookup_candidate_article(uuid)
 
     def lookup_clicked_article(self, article_id: UUID):
         try:

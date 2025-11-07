@@ -3,8 +3,10 @@ vars:
       - nrms
       - softmax
       - nrms_rrf_static_user
-      - nrms_topic_scores
+      - control
       - nrms_topics_static
+      - nrms_topic_mmr
+      - nrms_topic_mmr_personalized
 
 stages:
   # these are *foreach stages*: they have multiple versions, one for each pipeline.
