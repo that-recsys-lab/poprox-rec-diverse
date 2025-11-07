@@ -3,7 +3,7 @@ name: Tests
 on:
   push:
     branches:
-      - aishwarya/treatment1
+      - main
   pull_request:
 
 jobs:
