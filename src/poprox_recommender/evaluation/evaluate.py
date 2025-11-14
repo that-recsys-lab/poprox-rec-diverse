@@ -26,16 +26,18 @@ Options:
 # pyright: basic
 import logging
 import os
+from collections.abc import Sequence
 from itertools import batched
 from typing import Any, Iterator
 from uuid import UUID
 
+import lenskit
 import pandas as pd
 import ray
 from docopt import docopt
 from lenskit.logging import LoggingConfig, item_progress
 from lenskit.parallel import get_parallel_config
-from lenskit.parallel.ray import init_cluster
+from lenskit.parallel.ray import TaskLimiter, init_cluster
 
 from poprox_recommender.data.eval import EvalData
 from poprox_recommender.data.mind import MindData
@@ -63,28 +65,17 @@ def profile_eval_results(eval_data: EvalData, profile_recs: pd.DataFrame) -> Ite
     pc = get_parallel_config()
     profiles = rec_profiles(eval_data, profile_recs)
     if pc.processes > 1:
-        logger.info("starting parallel measurement with %d workers", pc.processes)
+        logger.info("starting parallel measurement with up to %d tasks", pc.processes)
         init_cluster(global_logging=True)
 
         eval_data_ref = ray.put(eval_data)
+        limit = TaskLimiter(pc.processes)
 
-        # use the batch backpressure mechanism
-        # https://docs.ray.io/en/latest/ray-core/patterns/limit-pending-tasks.html
-        result_refs = []
-        for batch in batched(profiles, 100):
-            if len(result_refs) > pc.processes:
-                # wait for a result, and return it
-                ready_refs, result_refs = ray.wait(result_refs, num_returns=1)
-                for rr in ready_refs:
-                    yield from ray.get(rr)
-
-            result_refs.append(measure_batch.remote(batch, eval_data_ref))
-
-        # yield remaining items
-        while result_refs:
-            ready_refs, result_refs = ray.wait(result_refs, num_returns=1)
-            for rr in ready_refs:
-                yield from ray.get(rr)
+        for bres in limit.imap(
+            lambda batch: measure_batch.remote(batch, eval_data_ref), batched(profiles, 100), ordered=False
+        ):
+            assert isinstance(bres, list)
+            yield from bres
 
     else:
         for profile in profiles:
@@ -99,6 +90,7 @@ def main():
     if options["--log-file"]:
         log_cfg.set_log_file(options["--log-file"])
     log_cfg.apply()
+    lenskit.configure(cfg_dir=project_root())
 
     global eval_data
 
@@ -127,6 +119,7 @@ def main():
             pb.update()
 
     metrics = pd.DataFrame.from_records(records)
+    print(metrics)
     logger.info("measured recs for %d profiles", metrics["profile_id"].nunique())
 
     profile_out_fn = project_root() / "outputs" / eval_name / pipe_name / "profile-metrics.csv.gz"
@@ -146,11 +139,10 @@ def main():
 
 
 @ray.remote(num_cpus=1)
-def measure_batch(profiles: list[ProfileRecs], eval_data_ref) -> list[dict[str, Any]]:
+def measure_batch(profiles: Sequence[ProfileRecs], eval_data) -> list[dict[str, Any]]:
     """
     Measure a batch of profile recommendations.
     """
-    eval_data = eval_data_ref
     return [measure_profile_recs(profile, eval_data) for profile in profiles]
 
 

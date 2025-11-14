@@ -13,9 +13,8 @@ from uuid import UUID
 import numpy as np
 import pandas as pd
 
-from poprox_concepts import AccountInterest, Article, Click, Entity, InterestProfile, Mention
-from poprox_concepts.api.recommendations import RecommendationRequestV2
-from poprox_concepts.domain import CandidateSet
+from poprox_concepts.api.recommendations import RecommendationRequestV4
+from poprox_concepts.domain import AccountInterest, Article, CandidateSet, Click, Entity, InterestProfile, Mention
 from poprox_recommender.data.eval import EvalData
 from poprox_recommender.paths import project_root
 
@@ -72,7 +71,7 @@ class PoproxData(EvalData):
         clicked_items = newsletter_clicks["article_id"].unique()
         return pd.DataFrame({"item_id": clicked_items, "rating": [1.0] * len(clicked_items)}).set_index("item_id")
 
-    def iter_profiles(self) -> Generator[RecommendationRequestV2]:
+    def iter_profiles(self) -> Generator[RecommendationRequestV4]:
         newsletters_df = self.newsletters_df.copy()
         newsletters_df["account_id_alias"] = newsletters_df["account_id"].astype(str)
 
@@ -130,7 +129,7 @@ class PoproxData(EvalData):
             ].itertuples():
                 candidate_articles.append(self.lookup_candidate_article(article_row.article_id))
 
-            yield RecommendationRequestV2(
+            yield RecommendationRequestV4(
                 candidates=CandidateSet(articles=candidate_articles),
                 interacted=CandidateSet(articles=past_articles),
                 interest_profile=profile,

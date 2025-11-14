@@ -11,7 +11,7 @@ from lenskit.pipeline import Component
 from pydantic import BaseModel
 from scipy.spatial import distance
 
-from poprox_concepts.domain import CandidateSet, InterestProfile, RecommendationList
+from poprox_concepts.domain import CandidateSet, ImpressedRecommendations, InterestProfile
 from poprox_recommender.pytorch.datachecks import assert_tensor_size
 from poprox_recommender.pytorch.decorators import torch_inference
 
@@ -111,7 +111,7 @@ class MMRPDiversifier(Component):
     @torch_inference
     def __call__(
         self, candidate_articles: CandidateSet, interest_profile: InterestProfile, interacted_articles: CandidateSet
-    ) -> RecommendationList:
+    ) -> ImpressedRecommendations:
         beta, topic_interest_probability_profile, topic_availability_probability_profile = calculate_beta(
             interest_profile, interacted_articles
         )
@@ -143,7 +143,7 @@ class MMRPDiversifier(Component):
             article_indices = mmrp_diversification(scores, similarity_matrix, theta=theta, topk=self.config.num_slots)
             recommended = [candidate_articles.articles[int(idx)] for idx in article_indices]
 
-        return RecommendationList(articles=recommended)
+        return ImpressedRecommendations.from_articles(articles=recommended)
 
 
 def compute_similarity_matrix(todays_article_vectors: torch.Tensor) -> torch.Tensor:
