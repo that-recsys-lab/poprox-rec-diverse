@@ -1,25 +1,21 @@
-# pyright: basic
-
 import torch
 from lenskit.pipeline import PipelineBuilder
 
-from poprox_concepts import CandidateSet, InterestProfile
-from poprox_concepts.domain import RecommendationList
+from poprox_concepts.domain import CandidateSet, InterestProfile
 from poprox_recommender.components.diversifiers.mmrp import MMRPDiversifier
 from poprox_recommender.components.embedders import NRMSArticleEmbedder
 from poprox_recommender.components.embedders.article import NRMSArticleEmbedderConfig
 from poprox_recommender.components.embedders.user import NRMSUserEmbedder, NRMSUserEmbedderConfig
+from poprox_recommender.components.embedders.user_article_feedback import (
+    UserArticleFeedbackConfig,
+    UserArticleFeedbackEmbedder,
+)
 from poprox_recommender.components.embedders.user_topic_prefs import UserOnboardingConfig, UserOnboardingEmbedder
+from poprox_recommender.components.filters.topic import TopicFilter
 from poprox_recommender.components.joiners.score import ScoreFusion
 from poprox_recommender.components.rankers.topk import TopkRanker
 from poprox_recommender.components.scorers.article import ArticleScorer
 from poprox_recommender.paths import model_file_path
-
-
-def to_recommendation_list(x):
-    if x is None or not hasattr(x, "articles") or x.articles is None:
-        return RecommendationList(articles=[])
-    return RecommendationList(articles=x.articles)
 
 
 def add_embeddings(fused: CandidateSet, embedded: CandidateSet) -> CandidateSet:
@@ -30,10 +26,13 @@ def add_embeddings(fused: CandidateSet, embedded: CandidateSet) -> CandidateSet:
 
 
 def configure(builder: PipelineBuilder, num_slots: int, device: str):
+    # standard practice is to put these calls in this order, to reuse logic
+    # Define pipeline inputs
     i_candidates = builder.create_input("candidate", CandidateSet)
     i_clicked = builder.create_input("clicked", CandidateSet)
     i_profile = builder.create_input("profile", InterestProfile)
 
+    # Embed candidate and clicked articles
     ae_config = NRMSArticleEmbedderConfig(
         model_path=model_file_path("nrms-mind/news_encoder.safetensors"), device=device
     )
@@ -42,6 +41,7 @@ def configure(builder: PipelineBuilder, num_slots: int, device: str):
         "history-NRMSArticleEmbedder", NRMSArticleEmbedder, ae_config, article_set=i_clicked
     )
 
+    # Embed the user (historical clicks)
     ue_config = NRMSUserEmbedderConfig(model_path=model_file_path("nrms-mind/user_encoder.safetensors"), device=device)
     e_user = builder.add_component(
         "user-embedder",
@@ -51,31 +51,143 @@ def configure(builder: PipelineBuilder, num_slots: int, device: str):
         clicked_articles=e_clicked,
         interest_profile=i_profile,
     )
-    ue_config2 = UserOnboardingConfig(
+
+    # Embed the positive user topic preferences
+    ue_pos_topic_config = UserOnboardingConfig(
         model_path=model_file_path("nrms-mind/user_encoder.safetensors"),
         device=device,
         embedding_source="static",
         topic_embedding="nrms",
+        topic_pref_values=[4, 5],
     )
-    e_user2 = builder.add_component(
-        "user-embedder2",
+    e_topic_positive = builder.add_component(
+        "user-pos-topic-embedder",
         UserOnboardingEmbedder,
-        ue_config2,
+        ue_pos_topic_config,
         candidate_articles=e_candidates,
         clicked_articles=e_clicked,
         interest_profile=i_profile,
     )
 
-    n_scorer = builder.add_component("scorer", ArticleScorer, candidate_articles=e_candidates, interest_profile=e_user)
-    n_scorer2 = builder.add_component(
-        "scorer2", ArticleScorer, candidate_articles=e_candidates, interest_profile=e_user2
+    # Embed the negative user topic preferences
+    ue_neg_topic_config = UserOnboardingConfig(
+        model_path=model_file_path("nrms-mind/user_encoder.safetensors"),
+        device=device,
+        embedding_source="static",
+        topic_embedding="nrms",
+        topic_pref_values=[1, 2],
     )
-    fusion = builder.add_component(
-        "fusion", ScoreFusion, {"combiner": "avg"}, candidates1=n_scorer, candidates2=n_scorer2
+    e_topic_negative = builder.add_component(
+        "user-neg-topic-embedder",
+        UserOnboardingEmbedder,
+        ue_neg_topic_config,
+        candidate_articles=e_candidates,
+        clicked_articles=e_clicked,
+        interest_profile=i_profile,
     )
 
+    # Embed the user positive feedback
+    ue_pos_fb_config = UserArticleFeedbackConfig(
+        model_path=model_file_path("nrms-mind/user_encoder.safetensors"),
+        device=device,
+        feedback_type=True,
+    )
+    e_feedback_positive = builder.add_component(
+        "user-neg-fb-embedder",
+        UserArticleFeedbackEmbedder,
+        ue_pos_fb_config,
+        candidate_articles=e_candidates,
+        interacted_articles=e_clicked,
+        interest_profile=i_profile,
+    )
+
+    # Embed the user negative feedback
+    ue_neg_fb_config = UserArticleFeedbackConfig(
+        model_path=model_file_path("nrms-mind/user_encoder.safetensors"),
+        device=device,
+        feedback_type=False,
+    )
+    e_feedback_negative = builder.add_component(
+        "user-pos-fb-embedder",
+        UserArticleFeedbackEmbedder,
+        ue_neg_fb_config,
+        candidate_articles=e_candidates,
+        interacted_articles=e_clicked,
+        interest_profile=i_profile,
+    )
+
+    # Score articles based on interaction history
+    n_scorer = builder.add_component("scorer", ArticleScorer, candidate_articles=e_candidates, interest_profile=e_user)
+
+    # Score articles based on topic preferences
+    positive_topic_score = builder.add_component(
+        "positive_topic_score",
+        ArticleScorer,
+        candidate_articles=builder.node("candidate-embedder"),
+        interest_profile=e_topic_positive,
+    )
+
+    negative_topic_score = builder.add_component(
+        "negative_topic_score",
+        ArticleScorer,
+        candidate_articles=builder.node("candidate-embedder"),
+        interest_profile=e_topic_negative,
+    )
+
+    topic_fusion = builder.add_component(
+        "topic_fusion",
+        ScoreFusion,
+        {"combiner": "sub"},
+        candidates1=positive_topic_score,
+        candidates2=negative_topic_score,
+    )
+
+    # Score articles based on feedback
+    positive_feedback_score = builder.add_component(
+        "positive_feedback_score",
+        ArticleScorer,
+        candidate_articles=builder.node("candidate-embedder"),
+        interest_profile=e_feedback_positive,
+    )
+
+    negative_feedback_score = builder.add_component(
+        "negative_feedback_score",
+        ArticleScorer,
+        candidate_articles=builder.node("candidate-embedder"),
+        interest_profile=e_feedback_negative,
+    )
+
+    feedback_fusion = builder.add_component(
+        "feedback_fusion",
+        ScoreFusion,
+        {"combiner": "sub"},
+        candidates1=positive_feedback_score,
+        candidates2=negative_feedback_score,
+    )
+
+    # Combine topic scoring and feedback -> all explicit data
+    explicit_fusion = builder.add_component(
+        "explicit_fusion",
+        ScoreFusion,
+        {"combiner": "avg"},
+        candidates1=topic_fusion,
+        candidates2=feedback_fusion,
+    )
+
+    # Combine click and explicit feedback -> all preference
+    fusion = builder.add_component(
+        "fusion",
+        ScoreFusion,
+        {"combiner": "avg", "weight1": 1, "weight2": 2},
+        candidates1=n_scorer,
+        candidates2=explicit_fusion,
+    )
+
+    # Filter articles based on topic preferences
+    f_candidates = builder.add_component("topic-filter", TopicFilter, candidates=fusion, interest_profile=i_profile)
+
     fused_with_embeddings = builder.add_component(
-        "fused_with_embeddings", add_embeddings, fused=fusion, embedded=e_candidates
+        "fused_with_embeddings", add_embeddings, fused=f_candidates, embedded=e_candidates
     )
 
     builder.add_component("ranker", TopkRanker, {"num_slots": 100}, candidate_articles=fused_with_embeddings)
@@ -86,7 +198,6 @@ def configure(builder: PipelineBuilder, num_slots: int, device: str):
         {"num_slots": num_slots, "theta": 0.6},
         candidate_articles=fused_with_embeddings,
         interest_profile=e_user,
-        interacted_articles=i_clicked,
     )
 
     # The final recommender component that the API expects
@@ -96,5 +207,4 @@ def configure(builder: PipelineBuilder, num_slots: int, device: str):
         {"num_slots": num_slots, "theta": 0.6},
         candidate_articles=fused_with_embeddings,
         interest_profile=e_user,
-        interacted_articles=i_clicked,
     )

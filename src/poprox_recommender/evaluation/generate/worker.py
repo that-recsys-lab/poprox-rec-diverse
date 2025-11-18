@@ -54,7 +54,7 @@ def generate_profile_recs(dataset: EvalData, outs: RecOutputs, pipeline: str, n_
             cluster_recommend(dataset, pipeline, n_profiles, outs, pc, task, pb)
 
         else:
-            serial_recommend(pipeline, dataset.iter_profiles(limit=n_profiles), outs, pb)
+            serial_recommend(pipeline, dataset.iter_profiles(), outs, pb)
 
     logger.info("finished recommending in %s", naturaldelta(task.duration) if task.duration else "unknown time")
     cpu = task.total_cpu()

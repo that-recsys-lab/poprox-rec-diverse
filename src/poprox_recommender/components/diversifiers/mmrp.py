@@ -77,9 +77,7 @@ def compute_topic_dist(interest_profile):
     return normalized_topic_prefs
 
 
-def calculate_beta(
-    interest_profile: InterestProfile, interacted_articles: CandidateSet
-) -> tuple[float, np.ndarray | None, np.ndarray | None]:
+def calculate_beta(interest_profile: InterestProfile) -> tuple[float, np.ndarray | None, np.ndarray | None]:
     mu = 0.0749
     sigma = 1.5527
 
@@ -109,11 +107,9 @@ class MMRPDiversifier(Component):
     config: MMRPConfig
 
     @torch_inference
-    def __call__(
-        self, candidate_articles: CandidateSet, interest_profile: InterestProfile, interacted_articles: CandidateSet
-    ) -> ImpressedRecommendations:
+    def __call__(self, candidate_articles: CandidateSet, interest_profile: InterestProfile) -> ImpressedRecommendations:
         beta, topic_interest_probability_profile, topic_availability_probability_profile = calculate_beta(
-            interest_profile, interacted_articles
+            interest_profile
         )
 
         # high theta = low diversity
