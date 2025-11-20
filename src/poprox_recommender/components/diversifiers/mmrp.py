@@ -78,8 +78,8 @@ def compute_topic_dist(interest_profile):
 
 
 def calculate_beta(interest_profile: InterestProfile) -> tuple[float, np.ndarray | None, np.ndarray | None]:
-    mu = 0.0749
-    sigma = 1.5527
+    mu = 0.0328
+    sigma = 0.0284
 
     topic_interest_dist = compute_topic_dist(interest_profile)
     topic_interest_probability_profile = list(

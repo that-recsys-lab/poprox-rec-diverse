@@ -192,14 +192,6 @@ def configure(builder: PipelineBuilder, num_slots: int, device: str):
 
     builder.add_component("ranker", TopkRanker, {"num_slots": 100}, candidate_articles=fused_with_embeddings)
 
-    builder.add_component(
-        "reranker",
-        MMRPDiversifier,
-        {"num_slots": num_slots, "theta": 0.6},
-        candidate_articles=fused_with_embeddings,
-        interest_profile=e_user,
-    )
-
     # The final recommender component that the API expects
     builder.add_component(
         "recommender",
@@ -208,3 +200,5 @@ def configure(builder: PipelineBuilder, num_slots: int, device: str):
         candidate_articles=fused_with_embeddings,
         interest_profile=e_user,
     )
+
+    builder.alias("reranker", "recommender")
