@@ -152,6 +152,19 @@ class PoproxData(EvalData):
             print(f"Did not find the clicked article with id {str(article_id)}")
             return None
 
+    def lookup_article(self, *, id: str | None = None, uuid: UUID | None = None):
+        if uuid is None:
+            if id:
+                # Convert string id to UUID if needed - for POPROX we expect UUIDs
+                try:
+                    uuid = UUID(id)
+                except ValueError:
+                    raise ValueError(f"Invalid UUID format: {id}")
+            else:
+                raise ValueError("must provide one of uuid, id")
+        # Use the existing lookup_candidate_article method
+        return self.lookup_candidate_article(uuid)
+
     def convert_row_to_article(self, article_row, mention_rows):
         mentions = [
             Mention(

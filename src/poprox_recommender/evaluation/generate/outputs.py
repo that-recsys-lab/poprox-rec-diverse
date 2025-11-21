@@ -365,7 +365,7 @@ class EmbeddingWriter(RecommendationWriter[pa.Table | None]):
                 # first-stage filtering, so we only send embeddings once from each worker
                 if aid not in self.seen:
                     rows.append({"article_id": aid, "embedding": embedded.embeddings[idx].cpu().numpy()})  # type: ignore
-                    self.seen.add(aid)
+                    # self.seen.add(aid)
 
         if rows:
             # directly use pyarrow to avoid DF overhead, small but easy to avoid here
