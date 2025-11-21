@@ -11,7 +11,7 @@ from lenskit.pipeline import Component
 from pydantic import BaseModel
 from scipy.spatial import distance
 
-from poprox_concepts.domain import CandidateSet, ImpressedRecommendations, InterestProfile
+from poprox_concepts.domain import CandidateSet, ImpressedSection, InterestProfile
 from poprox_recommender.pytorch.datachecks import assert_tensor_size
 from poprox_recommender.pytorch.decorators import torch_inference
 
@@ -32,7 +32,7 @@ def collect_beta_data(
     theta: float,
 ) -> dict:
     """Collect beta data for logging and analysis."""
-    onboarding = getattr(interest_profile, "onboarding_topics", "unknown")
+    onboarding = list(getattr(interest_profile, "onboarding_topics", "unknown"))
     profile_id = getattr(interest_profile, "profile_id", "unknown")
     profile_id_str = str(profile_id) if profile_id != "unknown" else "unknown"
     if onboarding and hasattr(onboarding[0], "account_id"):
@@ -107,7 +107,7 @@ class MMRPDiversifier(Component):
     config: MMRPConfig
 
     @torch_inference
-    def __call__(self, candidate_articles: CandidateSet, interest_profile: InterestProfile) -> ImpressedRecommendations:
+    def __call__(self, candidate_articles: CandidateSet, interest_profile: InterestProfile) -> ImpressedSection:
         beta, topic_interest_probability_profile, topic_availability_probability_profile = calculate_beta(
             interest_profile
         )
@@ -139,7 +139,7 @@ class MMRPDiversifier(Component):
             article_indices = mmrp_diversification(scores, similarity_matrix, theta=theta, topk=self.config.num_slots)
             recommended = [candidate_articles.articles[int(idx)] for idx in article_indices]
 
-        return ImpressedRecommendations.from_articles(articles=recommended)
+        return ImpressedSection.from_articles(articles=recommended)
 
 
 def compute_similarity_matrix(todays_article_vectors: torch.Tensor) -> torch.Tensor:
