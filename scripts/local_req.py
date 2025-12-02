@@ -14,9 +14,9 @@ if __name__ == "__main__":
         raw_json = req_file.read()
         req = RecommendationRequestV4.model_validate_json(raw_json)
 
-    event_nrms_topics_fb_filter = {
+    event_control = {
         "body": raw_json,
-        "queryStringParameters": {"pipeline": "nrms_topics_fb_filter"},
+        "queryStringParameters": {"pipeline": "control"},
         "isBase64Encoded": False,
     }
     event_nrms_mmr = {
@@ -30,8 +30,8 @@ if __name__ == "__main__":
         "isBase64Encoded": False,
     }
 
-    response_nrms_topics_fb_filter = root(req.model_dump(), pipeline="nrms_topics_fb_filter")
-    response_nrms_topics_fb_filter = RecommendationResponseV4.model_validate(response_nrms_topics_fb_filter)
+    response_control = root(req.model_dump(), pipeline="control")
+    response_control = RecommendationResponseV4.model_validate(response_control)
 
     response_nrms_mmr = root(req.model_dump(), pipeline="nrms_topic_mmr")
     response_nrms_mmr = RecommendationResponseV4.model_validate(response_nrms_mmr)
@@ -40,11 +40,9 @@ if __name__ == "__main__":
     response_nrms_mmr_personalized = RecommendationResponseV4.model_validate(response_nrms_mmr_personalized)
 
     print("\n")
-    print(f"{event_nrms_topics_fb_filter['queryStringParameters']['pipeline']}")
+    print(f"{event_control['queryStringParameters']['pipeline']}")
 
-    for idx, article in enumerate(
-        [impression.article for impression in response_nrms_topics_fb_filter.recommendations.impressions]
-    ):
+    for idx, article in enumerate([impression.article for impression in response_control.recommendations.impressions]):
         article_topics = extract_general_topics(article)
         print(f"{idx + 1}. {article.headline} {article_topics}")
 
