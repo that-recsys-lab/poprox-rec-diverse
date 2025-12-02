@@ -116,8 +116,10 @@ class MMRPDiversifier(Component):
         # low theta = high diversity
 
         # what does theta >1 mean?
-        theta = self.config.theta * (1 + (beta * 0.25))  # theta_p change
-        theta = np.clip(theta, 0, 1)  # keeping theta between 0-1
+        theta_p = self.config.theta * (1 + (beta * 0.25))  # theta_p change
+        theta_p = np.clip(theta_p, 0, 1)  # keeping theta between 0-1
+
+        logger.info(f"theta: {self.config.theta}, beta: {beta}, adjusted_theta: {theta_p}")
 
         beta_data = collect_beta_data(
             interest_profile,
@@ -125,7 +127,7 @@ class MMRPDiversifier(Component):
             topic_availability_probability_profile,
             beta,
             self.config.theta,
-            theta,
+            theta_p,
         )
         output_dir = os.environ.get("POPROX_OUTPUT_DIR", "outputs/poprox/nrms_topic_mmr_personalized")
         save_beta_to_file(beta_data, output_dir)
@@ -136,7 +138,7 @@ class MMRPDiversifier(Component):
             similarity_matrix = compute_similarity_matrix(candidate_articles.embeddings)
 
             scores = torch.as_tensor(candidate_articles.scores).to(similarity_matrix.device)
-            article_indices = mmrp_diversification(scores, similarity_matrix, theta=theta, topk=self.config.num_slots)
+            article_indices = mmrp_diversification(scores, similarity_matrix, theta=theta_p, topk=self.config.num_slots)
             recommended = [candidate_articles.articles[int(idx)] for idx in article_indices]
 
         return ImpressedSection.from_articles(articles=recommended)
