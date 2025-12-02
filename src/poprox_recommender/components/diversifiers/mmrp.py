@@ -120,6 +120,12 @@ class MMRPDiversifier(Component):
         theta_p = np.clip(theta_p, 0, 1)  # keeping theta between 0-1
 
         logger.info(f"theta: {self.config.theta}, beta: {beta}, adjusted_theta: {theta_p}")
+        logger.info(
+            "interest_profile: %s, topic_interest_probability_profile: %s, topic_availability_probability_profile: %s",
+            interest_profile,
+            topic_interest_probability_profile,
+            topic_availability_probability_profile,
+        )
 
         beta_data = collect_beta_data(
             interest_profile,
