@@ -28,6 +28,7 @@ def load_embeddings_cache():
             possible_paths = [
                 # "outputs/mind-subset/control/embeddings.parquet",  # This one works
                 "outputs/poprox/nrms_topic_mmr_personalized/embeddings.parquet",  # Now this works
+                "outputs/poprox/nrms_topic_mmr/embeddings.parquet",  # Now this works
                 "outputs/mind-subset/embeddings.parquet",
             ]
 
