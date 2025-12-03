@@ -732,6 +732,20 @@ wheels = [
 ]
 
 [[package]]
+name = "duckdb"
+version = "1.4.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/81/99/ac6c105118751cc3ccae980b12e44847273f3402e647ec3197aff2251e23/duckdb-1.4.2.tar.gz", hash = "sha256:df81acee3b15ecb2c72eb8f8579fb5922f6f56c71f5c8892ea3bc6fab39aa2c4", size = 18469786, upload-time = "2025-11-12T13:18:04.203Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c9/29/2f68c57e7c4242fedbf4b3fdc24fce2ffcf60640c936621d8a645593a161/duckdb-1.4.2-cp312-cp312-macosx_10_13_universal2.whl", hash = "sha256:9356fe17af2711e0a5ace4b20a0373e03163545fd7516e0c3c40428f44597052", size = 29015814, upload-time = "2025-11-12T13:16:59.329Z" },
+    { url = "https://files.pythonhosted.org/packages/34/b7/030cc278a4ae788800a833b2901b9a7da7a6993121053c4155c359328531/duckdb-1.4.2-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:946a8374c0252db3fa41165ab9952b48adc8de06561a6b5fd62025ac700e492f", size = 15403892, upload-time = "2025-11-12T13:17:02.141Z" },
+    { url = "https://files.pythonhosted.org/packages/f7/a2/67f4798a7a29bd0813f8a1e94a83e857e57f5d1ba14cf3edc5551aad0095/duckdb-1.4.2-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:389fa9abe4ca37d091332a2f8c3ebd713f18e87dc4cb5e8efd3e5aa8ddf8885f", size = 13733622, upload-time = "2025-11-12T13:17:04.502Z" },
+    { url = "https://files.pythonhosted.org/packages/6e/ac/d0d0e3feae9663334b2336f15785d280b54a56c3ffa10334e20a51a87ecd/duckdb-1.4.2-cp312-cp312-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:7be8c0c40f2264b91500b89c688f743e1c7764966e988f680b1f19416b00052e", size = 18470220, upload-time = "2025-11-12T13:17:07.049Z" },
+    { url = "https://files.pythonhosted.org/packages/a5/52/7570a50430cbffc8bd702443ac28a446b0fa4f77747a3821d4b37a852b15/duckdb-1.4.2-cp312-cp312-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:c6a21732dd52a76f1e61484c06d65800b18f57fe29e8102a7466c201a2221604", size = 20481138, upload-time = "2025-11-12T13:17:09.459Z" },
+    { url = "https://files.pythonhosted.org/packages/95/5e/be05f46a290ea27630c112ff9e01fd01f585e599967fc52fe2edc7bc2039/duckdb-1.4.2-cp312-cp312-win_amd64.whl", hash = "sha256:769440f4507c20542ae2e5b87f6c6c6d3f148c0aa8f912528f6c97e9aedf6a21", size = 12330737, upload-time = "2025-11-12T13:17:12.02Z" },
+]
+
+[[package]]
 name = "dulwich"
 version = "0.23.2"
 source = { registry = "https://pypi.org/simple" }
@@ -2366,7 +2380,9 @@ name = "nvidia-cusparselt-cu12"
 version = "0.6.3"
 source = { registry = "https://pypi.lenskit.org/torch/cu128/" }
 wheels = [
+    { url = "https://download.pytorch.org/whl/nvidia_cusparselt_cu12-0.6.3-py3-none-manylinux2014_aarch64.whl" },
     { url = "https://download.pytorch.org/whl/cu128/nvidia_cusparselt_cu12-0.6.3-py3-none-manylinux2014_x86_64.whl" },
+    { url = "https://download.pytorch.org/whl/nvidia_cusparselt_cu12-0.6.3-py3-none-manylinux2014_x86_64.whl" },
 ]
 
 [[package]]
@@ -2607,7 +2623,7 @@ wheels = [
 [[package]]
 name = "poprox-concepts"
 version = "0.0.1"
-source = { git = "https://github.com/CCRI-POPROX/poprox-concepts.git#320e5f7d45f2beb6850b15f8029bb84da5d67268" }
+source = { git = "https://github.com/CCRI-POPROX/poprox-concepts.git#ba361a4129df705bbed66ce294b732eb770ab197" }
 dependencies = [
     { name = "pydantic" },
 ]
@@ -2648,6 +2664,7 @@ cuda = [
 ]
 data = [
     { name = "docopt-ng" },
+    { name = "duckdb" },
     { name = "dvc", extra = ["s3"] },
     { name = "invoke" },
     { name = "jq" },
@@ -2665,6 +2682,7 @@ data = [
 dev = [
     { name = "coverage" },
     { name = "docopt-ng" },
+    { name = "duckdb" },
     { name = "dvc", extra = ["s3"] },
     { name = "hatch" },
     { name = "invoke" },
@@ -2677,6 +2695,7 @@ dev = [
     { name = "papermill" },
     { name = "plotnine" },
     { name = "pre-commit" },
+    { name = "py-spy" },
     { name = "pyarrow-stubs" },
     { name = "pylatex" },
     { name = "pyright" },
@@ -2692,6 +2711,7 @@ dev = [
 ]
 eval = [
     { name = "docopt-ng" },
+    { name = "duckdb" },
     { name = "dvc", extra = ["s3"] },
     { name = "invoke" },
     { name = "jq" },
@@ -2725,7 +2745,7 @@ requires-dist = [
     { name = "awslambdaric", marker = "extra == 'deploy'", specifier = "~=2.2" },
     { name = "fastapi", extras = ["all"], specifier = "~=0.115.11" },
     { name = "httpx", specifier = "~=0.28.1" },
-    { name = "lenskit", specifier = ">=2025.3.0a4.dev145" },
+    { name = "lenskit", specifier = ">=2025.3.0a4.dev145", index = "https://pypi.lenskit.org/lenskit-dev/" },
     { name = "mangum", specifier = "~=0.19.0" },
     { name = "nltk", specifier = ">=3.8,<4" },
     { name = "poprox-concepts", git = "https://github.com/CCRI-POPROX/poprox-concepts.git" },
@@ -2742,6 +2762,7 @@ cpu = [{ name = "torch", specifier = "~=2.2", index = "https://pypi.lenskit.org/
 cuda = [{ name = "torch", specifier = "~=2.2", index = "https://pypi.lenskit.org/torch/cu128/", conflict = { package = "poprox-recommender", group = "cuda" } }]
 data = [
     { name = "docopt-ng", specifier = ">=0.9" },
+    { name = "duckdb", specifier = "~=1.3" },
     { name = "dvc", extras = ["s3"], specifier = "~=3.51" },
     { name = "invoke", specifier = "~=2.2" },
     { name = "jq", specifier = "~=1.8" },
@@ -2759,6 +2780,7 @@ data = [
 dev = [
     { name = "coverage", specifier = ">=6.5" },
     { name = "docopt-ng", specifier = ">=0.9" },
+    { name = "duckdb", specifier = "~=1.3" },
     { name = "dvc", extras = ["s3"], specifier = "~=3.51" },
     { name = "hatch", specifier = "~=1.13" },
     { name = "invoke", specifier = "~=2.2" },
@@ -2771,6 +2793,7 @@ dev = [
     { name = "papermill", specifier = "~=2.6" },
     { name = "plotnine", specifier = "~=0.14.1" },
     { name = "pre-commit", specifier = "~=3.7" },
+    { name = "py-spy", specifier = ">=0.4.1" },
     { name = "pyarrow-stubs", specifier = "~=17.11" },
     { name = "pylatex", specifier = "~=1.4.2" },
     { name = "pyright", specifier = "~=1.1" },
@@ -2786,6 +2809,7 @@ dev = [
 ]
 eval = [
     { name = "docopt-ng", specifier = ">=0.9" },
+    { name = "duckdb", specifier = "~=1.3" },
     { name = "dvc", extras = ["s3"], specifier = "~=3.51" },
     { name = "invoke", specifier = "~=2.2" },
     { name = "jq", specifier = "~=1.8" },
@@ -2942,6 +2966,21 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/37/a8/d832f7293ebb21690860d2e01d8115e5ff6f2ae8bbdc953f0eb0fa4bd2c7/py-cpuinfo-9.0.0.tar.gz", hash = "sha256:3cdbbf3fac90dc6f118bfd64384f309edeadd902d7c8fb17f02ffa1fc3f49690", size = 104716, upload-time = "2022-10-25T20:38:06.303Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e0/a9/023730ba63db1e494a271cb018dcd361bd2c917ba7004c3e49d5daf795a2/py_cpuinfo-9.0.0-py3-none-any.whl", hash = "sha256:859625bc251f64e21f077d099d4162689c762b5d6a4c3c97553d56241c9674d5", size = 22335, upload-time = "2022-10-25T20:38:27.636Z" },
+]
+
+[[package]]
+name = "py-spy"
+version = "0.4.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/19/e2/ff811a367028b87e86714945bb9ecb5c1cc69114a8039a67b3a862cef921/py_spy-0.4.1.tar.gz", hash = "sha256:e53aa53daa2e47c2eef97dd2455b47bb3a7e7f962796a86cc3e7dbde8e6f4db4", size = 244726, upload-time = "2025-07-31T19:33:25.172Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/14/e3/3a32500d845bdd94f6a2b4ed6244982f42ec2bc64602ea8fcfe900678ae7/py_spy-0.4.1-py2.py3-none-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl", hash = "sha256:809094208c6256c8f4ccadd31e9a513fe2429253f48e20066879239ba12cd8cc", size = 3682508, upload-time = "2025-07-31T19:33:13.753Z" },
+    { url = "https://files.pythonhosted.org/packages/4f/bf/e4d280e9e0bec71d39fc646654097027d4bbe8e04af18fb68e49afcff404/py_spy-0.4.1-py2.py3-none-macosx_11_0_arm64.whl", hash = "sha256:1fb8bf71ab8df95a95cc387deed6552934c50feef2cf6456bc06692a5508fd0c", size = 1796395, upload-time = "2025-07-31T19:33:15.325Z" },
+    { url = "https://files.pythonhosted.org/packages/df/79/9ed50bb0a9de63ed023aa2db8b6265b04a7760d98c61eb54def6a5fddb68/py_spy-0.4.1-py2.py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:ee776b9d512a011d1ad3907ed53ae32ce2f3d9ff3e1782236554e22103b5c084", size = 2034938, upload-time = "2025-07-31T19:33:17.194Z" },
+    { url = "https://files.pythonhosted.org/packages/53/a5/36862e3eea59f729dfb70ee6f9e14b051d8ddce1aa7e70e0b81d9fe18536/py_spy-0.4.1-py2.py3-none-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:532d3525538254d1859b49de1fbe9744df6b8865657c9f0e444bf36ce3f19226", size = 2658968, upload-time = "2025-07-31T19:33:18.916Z" },
+    { url = "https://files.pythonhosted.org/packages/08/f8/9ea0b586b065a623f591e5e7961282ec944b5fbbdca33186c7c0296645b3/py_spy-0.4.1-py2.py3-none-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:4972c21890b6814017e39ac233c22572c4a61fd874524ebc5ccab0f2237aee0a", size = 2147541, upload-time = "2025-07-31T19:33:20.565Z" },
+    { url = "https://files.pythonhosted.org/packages/68/fb/bc7f639aed026bca6e7beb1e33f6951e16b7d315594e7635a4f7d21d63f4/py_spy-0.4.1-py2.py3-none-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:6a80ec05eb8a6883863a367c6a4d4f2d57de68466f7956b6367d4edd5c61bb29", size = 2763338, upload-time = "2025-07-31T19:33:22.202Z" },
+    { url = "https://files.pythonhosted.org/packages/e1/da/fcc9a9fcd4ca946ff402cff20348e838b051d69f50f5d1f5dca4cd3c5eb8/py_spy-0.4.1-py2.py3-none-win_amd64.whl", hash = "sha256:d92e522bd40e9bf7d87c204033ce5bb5c828fca45fa28d970f58d71128069fdc", size = 1818784, upload-time = "2025-07-31T19:33:23.802Z" },
 ]
 
 [[package]]
@@ -3263,7 +3302,7 @@ wheels = [
 
 [[package]]
 name = "ray"
-version = "2.47.1"
+version = "2.50.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -3276,11 +3315,10 @@ dependencies = [
     { name = "requests" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/96/d8/833edaf128fb5cdd53818d307bb93df75d943f32ecc5cb0d7b14981265e6/ray-2.47.1-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:322049c4546cf67e5efdad90c371c5508acbb193e5aaaf4038103c6c5ce1f578", size = 66091855, upload-time = "2025-06-17T22:27:08.946Z" },
-    { url = "https://files.pythonhosted.org/packages/ce/fa/23640e58046c91fcc05edd04bd51dd3d6a44cd7b408faf5bb3528a24c13d/ray-2.47.1-cp312-cp312-macosx_12_0_x86_64.whl", hash = "sha256:e6d9c78e53ac89cabbc4056aecfec53c506c692e3132af9dae941d6180ef462f", size = 68512697, upload-time = "2025-06-17T22:27:15.109Z" },
-    { url = "https://files.pythonhosted.org/packages/c5/32/6abf17053eb0ae720a2981a17e6b22797cc655782b603a707052b47f64eb/ray-2.47.1-cp312-cp312-manylinux2014_aarch64.whl", hash = "sha256:cd4e7eb475487364b5209963b17cefedcb7fbd3a816fdb6def7ea533ebd72424", size = 67918881, upload-time = "2025-06-17T22:27:21.43Z" },
-    { url = "https://files.pythonhosted.org/packages/5c/31/4545d03ed68eedf42b52e2a8705a584361e262640e145d6ab219ae33969c/ray-2.47.1-cp312-cp312-manylinux2014_x86_64.whl", hash = "sha256:3eaeaeec3bbe2ca6493e530c30473d84b8580a7ac3256bb9183d8c63def5a92f", size = 68888167, upload-time = "2025-06-17T22:27:27.978Z" },
-    { url = "https://files.pythonhosted.org/packages/94/f6/ed91383e0057ad9e3d9c45212a0c7edc5a9d24a2e46da0d55c8233df868c/ray-2.47.1-cp312-cp312-win_amd64.whl", hash = "sha256:601f23ba89918b7b3ffebf967328f7bdb605deaf8c103aad7820dc2722fe450c", size = 26164455, upload-time = "2025-06-17T22:27:33.784Z" },
+    { url = "https://files.pythonhosted.org/packages/1e/81/571fd2872eab5a3433d64498a7a4dd7f793ab06dd346905da3c8b3b5fc82/ray-2.50.1-cp312-cp312-macosx_12_0_arm64.whl", hash = "sha256:723e56c8193f8adde3ec18817ab437ad1cc9d4e72df1263e85697be282cfc526", size = 67612834, upload-time = "2025-10-18T01:40:48.952Z" },
+    { url = "https://files.pythonhosted.org/packages/89/3d/8272a45dc8ef0d2fd69442bdb30f3f017a30df24f9befd1ab66afc124009/ray-2.50.1-cp312-cp312-manylinux2014_aarch64.whl", hash = "sha256:a8424fd3a4a1ef314a85f80c361f22e9bd949c7a63e238cf4172dc1955b12c7c", size = 70289553, upload-time = "2025-10-18T01:40:54.412Z" },
+    { url = "https://files.pythonhosted.org/packages/5e/db/f6b2a5b86c827269877d234120fb5d6979f8c15020645dc33e651a853ae7/ray-2.50.1-cp312-cp312-manylinux2014_x86_64.whl", hash = "sha256:75c884e31d4dc0c384d4a4b68e9611175b6acba8622352bcabb73190cb9f8c3f", size = 71126830, upload-time = "2025-10-18T01:41:00.095Z" },
+    { url = "https://files.pythonhosted.org/packages/e7/25/4a13226bbdbfbbc89515b57a833b757e292538379918763a99531723dba4/ray-2.50.1-cp312-cp312-win_amd64.whl", hash = "sha256:a571529b74e959e1e088f6e0f320a612f351cdd309e17696f41327d9c9d42ce7", size = 26579445, upload-time = "2025-10-18T01:41:04.701Z" },
 ]
 
 [[package]]

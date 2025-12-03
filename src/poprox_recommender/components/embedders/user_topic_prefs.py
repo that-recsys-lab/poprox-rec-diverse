@@ -4,7 +4,7 @@ from uuid import uuid4
 
 import torch as th
 
-from poprox_concepts import Article, CandidateSet, Click, InterestProfile
+from poprox_concepts.domain import Article, CandidateSet, Click, InterestProfile
 from poprox_recommender.components.embedders import NRMSArticleEmbedder, NRMSUserEmbedder, NRMSUserEmbedderConfig
 from poprox_recommender.paths import model_file_path
 from poprox_recommender.pytorch.decorators import torch_inference
@@ -87,7 +87,7 @@ TOPIC_DESCRIPTIONS = {
 TOPIC_ARTICLES = [
     Article(
         article_id=uuid4(),
-        headline=description,
+        headline=f"{topic}: {description}",
         subhead=None,
         url=None,
         preview_image_id=None,
@@ -180,12 +180,12 @@ class UserOnboardingEmbedder(NRMSUserEmbedder):
         if self.embedded_topic_articles is None:
             self.embedded_topic_articles = self.article_embedder(CandidateSet(articles=TOPIC_ARTICLES))
 
+        topical_interests = interest_profile.interests_by_type("topic")
+
         if self.config.topic_pref_values is not None:
-            topic_clicks = virtual_pn_clicks(
-                interest_profile.onboarding_topics, TOPIC_ARTICLES, self.config.topic_pref_values
-            )
+            topic_clicks = virtual_pn_clicks(topical_interests, TOPIC_ARTICLES, self.config.topic_pref_values)
         else:
-            topic_clicks = virtual_clicks(interest_profile.onboarding_topics, TOPIC_ARTICLES)
+            topic_clicks = virtual_clicks(topical_interests, TOPIC_ARTICLES)
 
         embeddings_from_definitions = self.build_embeddings_from_definitions()
         embeddings_from_candidates = self.build_embeddings_from_articles(candidate_articles, TOPIC_ARTICLES)
@@ -233,7 +233,9 @@ class UserOnboardingEmbedder(NRMSUserEmbedder):
 
         # adding topic_embeddings separately
         interest_profile.topic_embeddings = topic_lookup
-        interest_profile.topic_weights = compute_topic_weights(interest_profile.onboarding_topics, TOPIC_ARTICLES)
+        interest_profile.topic_weights = compute_topic_weights(
+            interest_profile.interests_by_type("topic"), TOPIC_ARTICLES
+        )
 
         return interest_profile
 
@@ -269,7 +271,9 @@ class UserOnboardingEmbedder(NRMSUserEmbedder):
     def find_topical_articles(self, topic: str, articles: list[Article]) -> list[Article]:
         topical_articles = []
         for article in articles:
-            article_topics = {mention.entity.name for mention in article.mentions}
+            article_topics = {
+                mention.entity.name for mention in article.mentions if mention.entity.entity_type == "topic"
+            }
             if topic in article_topics:
                 topical_articles.append(article)
         return topical_articles
