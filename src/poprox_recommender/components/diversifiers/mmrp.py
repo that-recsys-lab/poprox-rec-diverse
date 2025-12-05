@@ -28,6 +28,7 @@ def collect_beta_data(
     topic_interest_probability_profile: np.ndarray | None,
     topic_availability_probability_profile: np.ndarray | None,
     beta: float,
+    beta_raw: float,
     original_theta: float,
     theta: float,
 ) -> dict:
@@ -40,11 +41,7 @@ def collect_beta_data(
     else:
         account_id_str = "unknown"
 
-    return {
-        "account_id": account_id_str,
-        "profile_id": profile_id_str,
-        "beta": beta,
-    }
+    return {"account_id": account_id_str, "profile_id": profile_id_str, "beta": beta, "beta_raw": beta_raw}
 
 
 def save_beta_to_file(beta_data: dict, output_dir: str = "outputs/poprox/nrms_topic_mmr_personalized"):
@@ -78,8 +75,8 @@ def compute_topic_dist(interest_profile):
 
 
 def calculate_beta(interest_profile: InterestProfile) -> tuple[float, np.ndarray | None, np.ndarray | None]:
-    mu = 0.0749
-    sigma = 1.5527
+    mu = 0.1280
+    sigma = 0.0701
 
     topic_interest_dist = compute_topic_dist(interest_profile)
     topic_interest_probability_profile = list(
@@ -100,7 +97,7 @@ def calculate_beta(interest_profile: InterestProfile) -> tuple[float, np.ndarray
     # low beta_raw = -ve beta
     beta = ((beta_raw) - mu) / sigma  # z-score
 
-    return beta, topic_interest_probability_profile, topic_availability_probability_profile
+    return beta, beta_raw, topic_interest_probability_profile, topic_availability_probability_profile
 
 
 class MMRPDiversifier(Component):
@@ -108,7 +105,7 @@ class MMRPDiversifier(Component):
 
     @torch_inference
     def __call__(self, candidate_articles: CandidateSet, interest_profile: InterestProfile) -> ImpressedSection:
-        beta, topic_interest_probability_profile, topic_availability_probability_profile = calculate_beta(
+        beta, beta_raw, topic_interest_probability_profile, topic_availability_probability_profile = calculate_beta(
             interest_profile
         )
 
@@ -116,10 +113,11 @@ class MMRPDiversifier(Component):
         # low theta = high diversity
 
         # what does theta >1 mean?
-        theta_p = self.config.theta * (1 + (beta * 0.25))  # theta_p change
+        adjustment_parameter = 0.5
+        theta_p = self.config.theta * (1 + (beta * adjustment_parameter))  # theta_p change
         theta_p = np.clip(theta_p, 0, 1)  # keeping theta between 0-1
 
-        logger.info(f"theta: {self.config.theta}, beta: {beta}, adjusted_theta: {theta_p}")
+        logger.info(f"beta: {beta_raw}, beta_n: {beta}, theta: {self.config.theta}, adjusted_theta: {theta_p}")
         logger.info(
             "interest_profile: %s, topic_interest_probability_profile: %s, topic_availability_probability_profile: %s",
             interest_profile,
@@ -132,6 +130,7 @@ class MMRPDiversifier(Component):
             topic_interest_probability_profile,
             topic_availability_probability_profile,
             beta,
+            beta_raw,
             self.config.theta,
             theta_p,
         )
